@@ -25,7 +25,7 @@ import java.awt.Font;
 import static java.lang.Thread.sleep;
 import static java.lang.Thread.yield;
 
-public class Grapher extends JFrame implements Runnable {
+public class Grapher extends JFrame {
 
         public TimeSeries series;
 
@@ -33,16 +33,6 @@ public class Grapher extends JFrame implements Runnable {
             series = new TimeSeries("Test");
             series.add(new Millisecond(), 0);
             initUI();
-        }
-        public void run() {
-            System.out.println("Inside Grapher run, series sz is: " + series.getItemCount());
-            series.fireSeriesChanged();
-            try {
-                sleep(300);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            yield();
         }
 
         private void initUI() {

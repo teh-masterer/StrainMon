@@ -13,6 +13,5 @@ public class Main {
             System.out.println("inni invokeLater? " + isEventDispatchThread());
             g.setVisible(true);
         });
-        new Thread(new SerialReader(g),"Serial Reader").start();
     }
 }

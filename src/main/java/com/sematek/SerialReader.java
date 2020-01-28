@@ -1,43 +1,57 @@
 package com.sematek;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.jfree.data.gantt.TaskSeries;
 import org.jfree.data.time.Millisecond;
-import org.jfree.data.time.TimeSeriesDataItem;
-
-import javax.swing.*;
-import java.awt.*;
 import java.io.InvalidObjectException;
 import java.io.UnsupportedEncodingException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import static java.awt.EventQueue.invokeLater;
 
 
 public class SerialReader implements Runnable {
+    private final AtomicBoolean running = new AtomicBoolean(false);
     SerialPort comPort;
     Grapher g;
     static final String requestReading = "$DA02?\r";
     static long lastRead;
 
+    public static double getOffset() {
+        return offset;
+    }
+
+    public static void setOffset(double offset) {
+        SerialReader.offset = offset;
+    }
+
+    static double offset;
+
     SerialReader(Grapher g) {
         this.g = g;
+        offset = 0;
         lastRead = System.currentTimeMillis();
         initSerialReader();
     }
 
     public void run() {
-        while (true){
+        running.set(true);
+        while (running.get()){
             if (comPort.isOpen()) {
                 readSerial();
                 try {
                     Thread.sleep(154);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    System.out.println("Thread was interrupted, possibly by user activated Stop button");
+
                 }
             }
         }
+    }
+    public void end() {
+        running.set(false);
+        closePort();
     }
 
     boolean initSerialReader () {
@@ -72,6 +86,10 @@ public class SerialReader implements Runnable {
     void addDataToGraph(long val) {
         invokeLater(() -> {
             g.series.add(new Millisecond(),val);
+            g.l2.setText(String.valueOf(val));
+            if (Long.parseLong(g.l5.getText())<val) {
+                g.l5.setText(String.valueOf(val));
+            }
             try {
                 g.dataset.validateObject();
             } catch (InvalidObjectException e) {
@@ -89,7 +107,7 @@ public class SerialReader implements Runnable {
         Matcher m = r.matcher(data);
         if (m.find()) {
             System.out.println("Found value " + m.group(0) + " at time " + ((System.currentTimeMillis() - lastRead)/1000) + "s");
-            addDataToGraph(Long.parseLong(m.group(0)));
+            addDataToGraph((long) (Long.parseLong(m.group(0))-offset));
         }
     }
 

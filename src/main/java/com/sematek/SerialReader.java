@@ -1,11 +1,13 @@
 package com.sematek;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.jfree.data.gantt.TaskSeries;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeriesDataItem;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.InvalidObjectException;
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,7 +32,7 @@ public class SerialReader implements Runnable {
             if (comPort.isOpen()) {
                 readSerial();
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(154);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -67,12 +69,15 @@ public class SerialReader implements Runnable {
         }
 
 
-    TimeSeriesDataItem addDataToGraph(long val) {
+    void addDataToGraph(long val) {
         invokeLater(() -> {
             g.series.add(new Millisecond(),val);
-            g.validate();
+            try {
+                g.dataset.validateObject();
+            } catch (InvalidObjectException e) {
+                e.printStackTrace();
+            }
                 });
-        return new TimeSeriesDataItem(new Millisecond(),val);
     }
 
     void processReadData (byte[] readBuffer) throws UnsupportedEncodingException {

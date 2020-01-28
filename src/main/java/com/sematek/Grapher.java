@@ -22,16 +22,20 @@ import java.awt.Font;
 public class Grapher extends JFrame {
 
         public TimeSeries series;
+        public JFreeChart chart;
+        public XYPlot plot;
+        public TimeSeriesCollection dataset;
 
         public Grapher() {
-            series = new TimeSeries("Test");
             initUI();
         }
 
         private void initUI() {
 
-            XYDataset dataset = createDataset();
-            JFreeChart chart = createChart(dataset);
+            series = new TimeSeries("Målte strekkrefter");
+            dataset = new TimeSeriesCollection();
+            dataset.addSeries(series);
+            chart = createChart(dataset);
 
             ChartPanel chartPanel = new ChartPanel(chart);
             chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -42,14 +46,6 @@ public class Grapher extends JFrame {
             setTitle("Strekkbenk");
             setLocationRelativeTo(null);
             setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        }
-
-        private XYDataset createDataset() {
-
-            var series = new TimeSeries("Målte strekkrefter");
-
-            return new TimeSeriesCollection(series);
-
         }
 
         private JFreeChart createChart(XYDataset dataset) {
@@ -64,7 +60,7 @@ public class Grapher extends JFrame {
                     false
             );
 
-            XYPlot plot = chart.getXYPlot();
+            plot = chart.getXYPlot();
 
             var renderer = new XYLineAndShapeRenderer();
             renderer.setSeriesPaint(0, Color.RED);

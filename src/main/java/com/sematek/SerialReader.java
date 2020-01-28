@@ -4,17 +4,23 @@ import com.fazecast.jSerialComm.SerialPort;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeriesDataItem;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.awt.EventQueue.invokeLater;
+
 
 public class SerialReader implements Runnable {
     SerialPort comPort;
+    Grapher g;
     static final String requestReading = "$DA02?\r";
     static long lastRead;
 
-    SerialReader() {
+    SerialReader(Grapher g) {
+        this.g = g;
         lastRead = System.currentTimeMillis();
         initSerialReader();
     }
@@ -62,6 +68,10 @@ public class SerialReader implements Runnable {
 
 
     TimeSeriesDataItem addDataToGraph(long val) {
+        invokeLater(() -> {
+            g.series.add(new Millisecond(),val);
+            g.validate();
+                });
         return new TimeSeriesDataItem(new Millisecond(),val);
     }
 

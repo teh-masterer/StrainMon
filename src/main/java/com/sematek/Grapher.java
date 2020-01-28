@@ -25,7 +25,6 @@ public class Grapher extends JFrame {
 
         public Grapher() {
             series = new TimeSeries("Test");
-            series.add(new Millisecond(), 0);
             initUI();
         }
 

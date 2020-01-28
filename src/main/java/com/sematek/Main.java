@@ -2,30 +2,18 @@ package com.sematek;
 
 import java.awt.*;
 
+import static javax.swing.SwingUtilities.isEventDispatchThread;
+
 
 public class Main {
 
     public static void main(String[] args) {
 
         EventQueue.invokeLater(() -> {
-        SerialReader s = null;
-        try {
-            Grapher g = new Grapher();
-            g.setVisible(true);
-            s = new SerialReader(g);
-            while (true) {
-                s.readSerial();
-                g.series.fireSeriesChanged();
-                System.out.println("Series size: " + g.series.getItemCount());
-                Thread.sleep(2000);
-            }
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            s.closePort();
-        }
-
-            });
+            System.out.println("inni invokeLater? " + isEventDispatchThread());
+            new Grapher().setVisible(true);
+        });
+        Thread t1 = new Thread(new SerialReader(),"t1");
+        t1.start();
     }
-
 }

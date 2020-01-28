@@ -2,21 +2,34 @@ package com.sematek;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.jfree.data.time.Millisecond;
+import org.jfree.data.time.TimeSeriesDataItem;
+
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class SerialReader {
-    Grapher grapher;
+public class SerialReader implements Runnable {
     SerialPort comPort;
     static final String requestReading = "$DA02?\r";
     static long lastRead;
 
-    SerialReader(Grapher grapher) {
-        this.grapher = grapher;
+    SerialReader() {
         lastRead = System.currentTimeMillis();
         initSerialReader();
+    }
+
+    public void run() {
+        while (true){
+            if (comPort.isOpen()) {
+                readSerial();
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     boolean initSerialReader () {
@@ -48,8 +61,8 @@ public class SerialReader {
         }
 
 
-    void addDataToGraph(long val) {
-        grapher.series.add(new Millisecond(),val);
+    TimeSeriesDataItem addDataToGraph(long val) {
+        return new TimeSeriesDataItem(new Millisecond(),val);
     }
 
     void processReadData (byte[] readBuffer) throws UnsupportedEncodingException {

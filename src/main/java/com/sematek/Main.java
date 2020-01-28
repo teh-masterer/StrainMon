@@ -1,15 +1,11 @@
 package com.sematek;
 
-import javax.swing.*;
 import java.awt.*;
-import java.io.IOException;
 
-import static java.lang.Thread.sleep;
 
 public class Main {
 
     public static void main(String[] args) {
-
 
         EventQueue.invokeLater(() -> {
         SerialReader s = null;

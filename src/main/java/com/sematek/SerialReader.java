@@ -1,8 +1,7 @@
 package com.sematek;
+
 import com.fazecast.jSerialComm.SerialPort;
 import org.jfree.data.time.Millisecond;
-
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,8 +50,6 @@ public class SerialReader {
 
     void addDataToGraph(long val) {
         grapher.series.add(new Millisecond(),val);
-
-
     }
 
     void processReadData (byte[] readBuffer) throws UnsupportedEncodingException {
@@ -67,6 +64,7 @@ public class SerialReader {
             addDataToGraph(Long.parseLong(m.group(0)));
         }
     }
+
     void closePort() {
         comPort.closePort();
 

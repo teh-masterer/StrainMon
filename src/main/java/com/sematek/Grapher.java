@@ -3,15 +3,11 @@ package com.sematek;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.block.BlockBorder;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.title.TextTitle;
-import org.jfree.data.general.SeriesException;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.xy.XYDataset;
-import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 
@@ -22,8 +18,6 @@ import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Font;
 
-import static java.lang.Thread.sleep;
-import static java.lang.Thread.yield;
 
 public class Grapher extends JFrame {
 

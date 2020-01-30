@@ -3,24 +3,15 @@ package com.sematek;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.renderer.xy.XYSplineRenderer;
 import org.jfree.chart.title.TextTitle;
-import org.jfree.data.category.CategoryDataset;
-import org.jfree.data.general.Dataset;
-import org.jfree.data.time.Millisecond;
-import org.jfree.data.time.MovingAverage;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.*;
 import java.util.ArrayList;
 
@@ -28,25 +19,21 @@ import java.util.ArrayList;
 public class Grapher extends JFrame {
 
     public TimeSeries series;
-    public TimeSeries series2; //Moving average
     public JFreeChart chart;
     public XYPlot plot;
     public TimeSeriesCollection dataset;
     public SerialReader serialReader;
-    public JLabel l2;
-    public JLabel l5;
-    public JLabel l8;
-    public long startTimeMillis;
-    public boolean needToCalculateAverage;
+
+    public JLabel labelCurrentValue;   //These labels are updated from SerialReader class
+    public JLabel labelMaxValue;
+    public JLabel labelOffsetValue;
 
     public Grapher() {
         initUI();
-        startTimeMillis = System.currentTimeMillis();
-        l2.setText("0");
-        l5.setText("0");
+
     }
 
-    private void startSerialReader() throws InterruptedException {
+    private void startSerialReader()  {
 
         serialReader = new SerialReader(this);
         new Thread(serialReader).start();
@@ -68,6 +55,8 @@ public class Grapher extends JFrame {
             dataset = new TimeSeriesCollection();
             dataset.addSeries(series);
             chart = createChart(dataset);
+            chart.setAntiAlias(true);
+            chart.setTextAntiAlias(true);
 
             setLayout(new BorderLayout());
             ChartPanel chartPanel = new ChartPanel(chart);
@@ -77,88 +66,67 @@ public class Grapher extends JFrame {
 
 
             JButton b1=new JButton("Start");
-            b1.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    try {
-                        startSerialReader();
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            });
-            JButton b2=new JButton("Stop");
-            b2.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    serialReader.end();
-                }
-            });
+            b1.addActionListener(e -> startSerialReader());
+            JButton b2=new JButton("Stopp");
+            b2.addActionListener(e -> serialReader.end());
             JButton b3=new JButton("Eksporter...");
-            b3.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    final JFileChooser fc = new JFileChooser();
-                    fc.setCurrentDirectory(new File(System.getProperty("user.home")));
-                    fc.setDialogTitle("Specify a file to save");
+            b3.addActionListener(e -> {
+                final JFileChooser fc = new JFileChooser();
+                fc.setCurrentDirectory(new File(System.getProperty("user.home")));
+                fc.setDialogTitle("Specify a file to save");
 
-                    int userSelection = fc.showSaveDialog(b3);
+                int userSelection = fc.showSaveDialog(b3);
 
-                    if (userSelection == JFileChooser.APPROVE_OPTION) {
-                        File fileToSave = fc.getSelectedFile();
-                        System.out.println("Save as file: " + fileToSave.getAbsolutePath());
-                        storeDataSet(chart,fileToSave.getAbsolutePath());
+                if (userSelection == JFileChooser.APPROVE_OPTION) {
+                    File fileToSave = fc.getSelectedFile();
+                    System.out.println("Save as file: " + fileToSave.getAbsolutePath());
+                    storeDataSet(chart,fileToSave.getAbsolutePath());
 
-                    }
                 }
             });
             JButton b4 = new JButton("Nullstill");
-            b4.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    int itemCount = series.getItemCount();
-                    if (itemCount < 10) {
-                        JOptionPane.showMessageDialog(b4,
-                                "Vent litt!!!",
-                                "Alvorlig advarsel",
-                                JOptionPane.WARNING_MESSAGE);
-                    } else {
-                        double sumOfLastTenReadings = 0;
-                        for (int i = 1; i < 11; i++) {
-                            sumOfLastTenReadings += (double) series.getValue(itemCount - i);
-                        }
-                        double averageLastTenReadings = sumOfLastTenReadings / 10;
-                        System.out.println("Average of last ten readings is: " + averageLastTenReadings);
-                        serialReader.setOffset(averageLastTenReadings);
-                        l8.setText(String.valueOf(averageLastTenReadings));
-                        l5.setText("0");
-                        series.delete(0, series.getItemCount());
-                    }
+            b4.addActionListener(e -> {
+                series.delete(0, series.getItemCount()-1);
+                serialReader.setActivateZeroBalance(true);
+                serialReader.setCurrentMax(0);
+                labelMaxValue.setText("0.00");
+            });
+            JButton b5 = new JButton("Slå på glatting av data");
+            b5.addActionListener(e -> {
+                if (SerialReader.isSmoothGraph()) {
+                    SerialReader.setSmoothGraph(false);
+                    b5.setText("Slå på glatting av data");
+                } else {
+                    SerialReader.setSmoothGraph(true);
+                    labelMaxValue.setText("0.00");
+                    b5.setText("Slå av glatting av data");
                 }
             });
             JLabel l1 =new JLabel("Verdi: ");
-            l2 =new JLabel("0");
+            labelCurrentValue =new JLabel("0.00");
             JLabel l3 =new JLabel("kg");
             JLabel l4 =new JLabel("Maks: ");
-            l5 =new JLabel("0");
+            labelMaxValue =new JLabel("0.00");
             JLabel l6 =new JLabel("kg");
             JLabel l7 = new JLabel("Kalkulert nullpunkt: ");
-            l8 = new JLabel(("0.0"));
+            labelOffsetValue = new JLabel(("0.00"));
+            JLabel l9 = new JLabel("kg");
 
-
-            JPanel jPanel = new JPanel();
+            JPanel jPanel = new JPanel(); //Make the button panel
             jPanel.add(b1);
             jPanel.add(b2);
             jPanel.add(b4);
             jPanel.add(l1);
-            jPanel.add(l2);
+            jPanel.add(labelCurrentValue);
             jPanel.add(l3);
             jPanel.add(l4);
-            jPanel.add(l5);
+            jPanel.add(labelMaxValue);
             jPanel.add(l6);
             jPanel.add(l7);
-            jPanel.add(l8);
+            jPanel.add(labelOffsetValue);
+            jPanel.add(l9);
             jPanel.add(b3);
+            jPanel.add(b5);
 
             add(jPanel,BorderLayout.SOUTH);
             pack();
@@ -209,8 +177,7 @@ public class Grapher extends JFrame {
     private void storeDataSet(JFreeChart chart, String filename) {
         java.util.List<String> csv = new ArrayList<>();
         if (chart.getPlot() instanceof XYPlot) {
-            Dataset dataset = chart.getXYPlot().getDataset();
-            XYDataset xyDataset = (XYDataset) dataset;
+            XYDataset xyDataset = chart.getXYPlot().getDataset();
             int seriesCount = xyDataset.getSeriesCount();
             for (int i = 0; i < seriesCount; i++) {
                 int itemCount = xyDataset.getItemCount(i);
@@ -222,22 +189,10 @@ public class Grapher extends JFrame {
                 }
             }
 
-        } else if (chart.getPlot() instanceof CategoryPlot) {
-            Dataset dataset = chart.getCategoryPlot().getDataset();
-            CategoryDataset categoryDataset = (CategoryDataset) dataset;
-            int columnCount = categoryDataset.getColumnCount();
-            int rowCount = categoryDataset.getRowCount();
-            for (int i = 0; i < rowCount; i++) {
-                for (int j = 0; j < columnCount; j++) {
-                    Comparable key = categoryDataset.getRowKey(i);
-                    Number n = categoryDataset.getValue(i, j);
-                    csv.add(String.format("%s, %s", key, n));
-                }
-            }
-        } else {
+        }  else {
             throw new IllegalStateException("Unknown dataset");
         }
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".csv"));) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".csv"))) {
             for (String line : csv) {
                 writer.append(line);
                 writer.newLine();

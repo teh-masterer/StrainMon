@@ -7,7 +7,7 @@
   "STOP_BITS": 1,
   "PARITY_BITS": 0,
   "SMOOTH_GRAPH": false,
-  "AUTO_ZERO_ON_START": false,
+  "AUTO_ZERO_ON_START": true,
   "USER_OFFSET": 0.0,
   "SMOOTHING_BUFFER_LENGTH": 15
 }

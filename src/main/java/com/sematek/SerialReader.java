@@ -1,26 +1,22 @@
 package com.sematek;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.jfree.data.time.Millisecond;
+
 import java.io.InvalidObjectException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import static java.awt.EventQueue.invokeLater;
+
 import static org.apache.commons.lang3.StringUtils.trim;
 
 
 public class SerialReader implements Runnable {
 
-
-
     private final AtomicBoolean running = new AtomicBoolean(false);
-    double CORRECTION_FACTOR ;
-    double CORRECTION_OFFSET;
+    final double CORRECTION_FACTOR;
+    final double CORRECTION_OFFSET;
     final int SMOOTHING_BUFFER_LENGTH;
     final int SERIAL_GET_DATA_INTERVAL; // 6.5Hz refresh rate is equal to ~154ms
     final int BAUD_RATE;
@@ -28,19 +24,19 @@ public class SerialReader implements Runnable {
     final int STOP_BITS;
     final int PARITY_BITS;
     boolean AUTO_ZERO_ON_START;
-    long lastReadTime;
-    boolean smoothGraph;
+    final long lastReadTime;
     boolean activateZeroBalance;
-    double[] recentValues;
+    boolean paused;
+    final double[] recentValues;
     double userOffset;
 
     String deviceId, digitalFilter, instrumentVersion, resolution; //all of these are read
     int fullScale, inputSensibility, baudRate;
 
     SerialPort comPort;
-    final Grapher g;
+    final StrainTestObject sto;
 
-    SerialReader(Grapher g) {
+    SerialReader(StrainTestObject sto) {
         Config.load("config.json");
         this.BAUD_RATE = Config.getInstance().BAUD_RATE;
         this.CORRECTION_OFFSET = Config.getInstance().CORRECTION_OFFSET;
@@ -50,16 +46,16 @@ public class SerialReader implements Runnable {
         this.STOP_BITS = Config.getInstance().STOP_BITS;
         this.PARITY_BITS = Config.getInstance().PARITY_BITS;
         this.userOffset = Config.getInstance().USER_OFFSET;
-        this.smoothGraph = Config.getInstance().SMOOTH_GRAPH;
         this.SMOOTHING_BUFFER_LENGTH = Config.getInstance().SMOOTHING_BUFFER_LENGTH;
         this.activateZeroBalance = Config.getInstance().AUTO_ZERO_ON_START;
+        System.out.println("Loaded config file with timestamp " + Config.getInstance().TIMESTAMP);
 
-        this.g = g;
+        this.sto = sto;
         lastReadTime = System.currentTimeMillis();
         initSerialReader();
         recentValues = new double[SMOOTHING_BUFFER_LENGTH];
         Arrays.fill(recentValues, 0);
-        currentMax = 0;
+        paused = false;
     }
 
     public void run() {
@@ -69,23 +65,25 @@ public class SerialReader implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        while (running.get()){
+        while (running.get()) {
+            if (!paused) {
                 try {
                     processReadData(readAndWriteFromSerial("$DA" + deviceId + "?\r"));
                     Thread.sleep(SERIAL_GET_DATA_INTERVAL);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
                     System.out.println("Thread was interrupted!");
                 }
             }
+        }
         System.out.println("Running parameter is now set to " + running.get());
     }
+
     public void end() {
         running.set(false);
         closePort();
     }
 
-    void initSerialReader () {
+    void initSerialReader() {
         comPort = SerialPort.getCommPorts()[0]; //Open whatever's available
         comPort.setComPortParameters(BAUD_RATE, DATA_BITS, STOP_BITS, PARITY_BITS);
         comPort.openPort();
@@ -97,10 +95,10 @@ public class SerialReader implements Runnable {
         }
     }
 
-    void getDeviceConfig () throws InterruptedException {
+    void getDeviceConfig() throws InterruptedException {
         String digitalFilterRaw, baudRateRaw, fullScaleRaw, inputSensibilityRaw; //config data from connected board
 
-        deviceId = readAndWriteFromSerial("$ID?\r").substring(1,3);
+        deviceId = readAndWriteFromSerial("$ID?\r").substring(1, 3);
         digitalFilterRaw = trim(readAndWriteFromSerial("$FD" + deviceId + "?\r").substring(3));
         baudRateRaw = trim(readAndWriteFromSerial("$BD" + deviceId + "?\r").substring(3));
         resolution = trim(readAndWriteFromSerial("$RD" + deviceId + "?\r").substring(3));
@@ -182,72 +180,29 @@ public class SerialReader implements Runnable {
         }
     }
 
-    void processReadData (String in) {
+    void processReadData(String in) {
         String pattern = "(?<=.{5})[1-9]([0-9]*)";
         Pattern r = Pattern.compile(pattern);
         Matcher m = r.matcher(in);
         if (m.find()) {
-            double correctedValue = Double.parseDouble(m.group(0))/CORRECTION_FACTOR+CORRECTION_OFFSET; //All values are corrected by a a*x+c factor found by experimentation
+            double correctedValue = Double.parseDouble(m.group(0)) / CORRECTION_FACTOR + CORRECTION_OFFSET; //All values are corrected by a a*x+c factor found by experimentation
             System.out.println("Found value " + m.group(0) + " / " + correctedValue + " at time " + ((System.currentTimeMillis() - lastReadTime) / 1000) + "s");
-            if (smoothGraph || activateZeroBalance) {
+            if (activateZeroBalance) {
                 double rollingSum = 0;
                 for (int i = recentValues.length - 2; i >= 0; i--) {
                     recentValues[i + 1] = recentValues[i];
-                    rollingSum += recentValues[i+1];
+                    rollingSum += recentValues[i + 1];
                 }
                 rollingSum += recentValues[0] = correctedValue;
 
                 if (recentValues[recentValues.length - 1] != 0) {
-                    double dataToBeInserted = rollingSum / recentValues.length;
-                    if (activateZeroBalance) {
-                        userOffset = dataToBeInserted;
-                        activateZeroBalance = false;
-                        g.labelOffsetValue.setText(String.valueOf(round(userOffset,2)));
-                    }
-                    if (smoothGraph) {
-                        addDataToGraph(dataToBeInserted - userOffset, correctedValue - userOffset);
-                    }
+                    userOffset = rollingSum / recentValues.length;
+                    activateZeroBalance = false;
+                    sto.setOffsetValue(userOffset);
                 }
             } else {
-                addDataToGraph(correctedValue - userOffset);
+                sto.addDataToGraph(correctedValue - userOffset);
             }
-        }
-    }
-
-    void addDataToGraph(double val) { //Without smooth graph
-        final double finalVal = round(val,2);
-        invokeLater(() -> {
-            g.series.add(new Millisecond(),val);
-            updateValueLabels(val);
-        });
-    }
-
-    void addDataToGraph(double val, double rawVal) { //For smooth graph
-        final double finalVal = round(rawVal,2);
-        invokeLater(() -> {
-            g.series.add(new Millisecond(),(int) val);
-            updateValueLabels(rawVal);
-        });
-    }
-
-    public static double round(double value, int places) {
-        if (places < 0) throw new IllegalArgumentException();
-
-        BigDecimal bd = BigDecimal.valueOf(value);
-        bd = bd.setScale(places, RoundingMode.HALF_UP);
-        return bd.doubleValue();
-    }
-
-    private void updateValueLabels (double val) {
-        g.labelCurrentValue.setText(String.valueOf(round(val,2)));
-        if (currentMax< val) {
-            g.labelMaxValue.setText(String.valueOf(round(val,2)));
-            currentMax = val;
-        }
-        try {
-            g.dataset.validateObject();
-        } catch (InvalidObjectException e) {
-            e.printStackTrace();
         }
     }
 
@@ -262,25 +217,20 @@ public class SerialReader implements Runnable {
 
     }
 
-    public void setCurrentMax(double currentMax) {
-        this.currentMax = currentMax;
-    }
-
-    double currentMax;
-
     public void setActivateZeroBalance(boolean activateZeroBalance) {
         this.activateZeroBalance = activateZeroBalance;
     }
 
-    public boolean isSmoothGraph() {
-        return smoothGraph;
-    }
-
-    public void setSmoothGraph(boolean smoothGraph) {
-        this.smoothGraph = smoothGraph;
-    }
     public boolean getRunning() {
         return running.get();
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public void setPaused(boolean paused) {
+        this.paused = paused;
     }
 }
 

@@ -3,12 +3,11 @@ package com.sematek;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.Axis;
 import org.jfree.chart.axis.AxisSpace;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYSplineRenderer;
+import org.jfree.chart.renderer.xy.DefaultXYItemRenderer;
+
 import org.jfree.chart.title.TextTitle;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.time.TimeSeries;
@@ -17,8 +16,6 @@ import org.jfree.data.time.TimeSeriesCollection;
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
 
 public class Grapher extends JFrame {
 
@@ -32,61 +29,63 @@ public class Grapher extends JFrame {
     public JLabel labelMaxValue;
     public JLabel labelOffsetValue;
 
+    private StrainTestObject strainTestObject;
+
     public Grapher() {
         initUI();
-        s = new SerialReader(this);
     }
 
-
+    //Clicking the "Start" button determines if the Strain Test Object is populated with real data or not, before this method is called
     private void startSerialReader()  {
-
-        if (s.comPort.isOpen()) {
-            s.closePort();
+        if (s != null) {
+            if (s.comPort.isOpen()) { //Ensure port is ready
+                s.closePort();
+            }
         }
-        s = new SerialReader(this);
+        s = new SerialReader(strainTestObject); //Make a new reader connection, give it access to data storage object
         new Thread(s).start();
-        dataset.removeAllSeries();
+        strainTestObject.removeAllSeries(); //reset the data if any, on start
+
+        //Following three lines only here for debug of STO
+
         series = new TimeSeries("Strekk");
+        dataset = new TimeSeriesCollection();
         dataset.addSeries(series);
+        chart.getXYPlot().setDataset(dataset);
+
+        //dataset = strainTestObject.getDataset();
+        //series = (TimeSeries) dataset.getSeries();
+        //chart.getXYPlot().setDataset(dataset);
+        //dataset = strainTestObject.getDataset(); //load the dataset containing series to the graph
         try {
             dataset.validateObject();
         } catch (InvalidObjectException e) {
             e.printStackTrace();
         }
-
+        labelCurrentValue.setText(String.valueOf(strainTestObject.getCurrentValue()));
+        labelOffsetValue.setText(String.valueOf(strainTestObject.getOffsetValue()));
+        labelMaxValue.setText(String.valueOf(strainTestObject.getMaxValue()));
     }
 
         private void initUI() {
-
-            series = new TimeSeries("Strekk");
-            dataset = new TimeSeriesCollection();
-            dataset.addSeries(series);
             chart = createChart(dataset);
-            chart.setAntiAlias(true);
-            chart.setTextAntiAlias(true);
 
             setLayout(new BorderLayout());
             ChartPanel chartPanel = new ChartPanel(chart);
             chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
             chartPanel.setBackground(Color.white);
-            add(chartPanel,BorderLayout.CENTER);
+            add(chartPanel,BorderLayout.NORTH);
 
-            DecimalFormat df = new DecimalFormat("0");
             NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
             rangeAxis.setStandardTickUnits(NumberAxis.createStandardTickUnits ());
-            rangeAxis.setTickUnit (new NumberTickUnit(20, df, 10));
-            rangeAxis.setAutoRangeMinimumSize(100);
-
-
-            JButton b1=new JButton("Start");
-            b1.setAlignmentX(Component.LEFT_ALIGNMENT);
-            b1.addActionListener(e -> startSerialReader());
+            rangeAxis.setAutoRangeMinimumSize(200);
             JButton b2=new JButton("Stopp");
             b2.setAlignmentX(Component.LEFT_ALIGNMENT);
             b2.addActionListener(e -> s.end());
             JButton b3=new JButton("Eksporter...");
             b3.setAlignmentX(Component.RIGHT_ALIGNMENT);
             b3.addActionListener(e -> {
+                Utils.appendToExcelDatabase(strainTestObject);
                 final JFileChooser fc = new JFileChooser();
                 fc.setCurrentDirectory(new File(System.getProperty("user.home")));
                 fc.setDialogTitle("Specify a file to save");
@@ -96,34 +95,89 @@ public class Grapher extends JFrame {
                 if (userSelection == JFileChooser.APPROVE_OPTION) {
                     File fileToSave = fc.getSelectedFile();
                     System.out.println("Save as file: " + fileToSave.getAbsolutePath());
-                    storeDataSet(chart,fileToSave.getAbsolutePath());
+                    Utils.storeDataSet(chart,fileToSave.getAbsolutePath());
 
                 }
-            });
+                });
             JButton b4 = new JButton("Nullstill");
             b4.setAlignmentX(Component.LEFT_ALIGNMENT);
             b4.addActionListener(e -> {
                 if (s.getRunning()) {
                     series.delete(0, series.getItemCount() - 1);
                     s.setActivateZeroBalance(true);
-                    s.setCurrentMax(0);
                     labelMaxValue.setText("0.00");
                 } else {
                     JOptionPane.showMessageDialog(null,"Start prosessen for å kunne nullstille!");
                 }
             });
-            JButton b5 = new JButton("Slå på glatting av data");
-            b1.setAlignmentX(Component.RIGHT_ALIGNMENT);
-            b5.addActionListener(e -> {
-                if (s.isSmoothGraph()) {
-                    s.setSmoothGraph(false);
-                    b5.setText("Slå på glatting av data");
+
+            JButton b7 = new JButton("Start...");
+            b7.setAlignmentX(Component.LEFT_ALIGNMENT);
+            b7.addActionListener(e -> {
+                JTextField testIDField = new JTextField(5);
+                JTextField customerField = new JTextField(5);
+                JTextField specimenTypeField = new JTextField(5);
+                JTextField specimenNameField = new JTextField(5);
+                JTextField testCommentField = new JTextField(5);
+                JTextField operatorField = new JTextField(5);
+                JTextField localeField = new JTextField(5);
+
+                try {
+                    testIDField.setText(Utils.findPreviousTestId());
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                //Perhaps all of this should be dynamically pulled from StrainTestObject? For now it isn't.
+                JPanel myPanel = new JPanel();
+                myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.PAGE_AXIS));
+
+                myPanel.add(new JLabel("Test-ID: "));
+                myPanel.add(testIDField);
+
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(new JLabel("Kunde: "));
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(customerField);
+                myPanel.add(new JLabel("Lokalitet: "));
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(localeField);
+                myPanel.add(new JLabel("Prøvetype: "));
+                myPanel.add(specimenTypeField);
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(new JLabel("Linenummer: "));
+                myPanel.add(specimenNameField);
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(new JLabel("Kommentar: "));
+                myPanel.add(testCommentField);
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(new JLabel("Operatør: "));
+                myPanel.add(operatorField);
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+
+
+                int result = JOptionPane.showConfirmDialog(null, myPanel,
+                        "Sleng inn testdata her", JOptionPane.OK_CANCEL_OPTION);
+                if (result == JOptionPane.OK_OPTION) {
+                    strainTestObject = new StrainTestObject(testIDField.getText(), customerField.getText(),localeField.getText(),specimenTypeField.getText(),specimenNameField.getText(),testCommentField.getText(),operatorField.getText(),this);
+                    JOptionPane.showMessageDialog(null,strainTestObject.validateInput());
+                    if (strainTestObject.validateInput().equals("OK")) {
+                        startSerialReader();
+                    } else {
+                        b7.doClick();
+                    }
+                    /*System.out.println("ID: " + testIDField.getText() + "\tKunde: " + customerField.getText() + "\tLokalitet: " + localeField.getText() + "\tType: " +
+                            specimenTypeField.getText() + "\tNavn: " + specimenNameField.getText() + "\tKommentar: " + testCommentField.getText() +
+                            "\tOperatør: " + operatorField.getText());
+                    //Copy text from fields to String variables in global scope */
+
                 } else {
-                    s.setSmoothGraph(true);
-                    labelMaxValue.setText("0.00");
-                    b5.setText("Slå av glatting av data");
+                    strainTestObject = new StrainTestObject(this);
+                    startSerialReader();
                 }
             });
+
+
             JButton b6 = new JButton("Enhetsinfo...");
             b6.setAlignmentX(Component.RIGHT_ALIGNMENT);
             b6.addActionListener(e -> {
@@ -135,37 +189,86 @@ public class Grapher extends JFrame {
                     JOptionPane.showMessageDialog(null,"Start prosessen for å vise enhetsinformasjon!");
                 }
             });
+
+            JButton b8 = new JButton("Pause...");
+            b8.addActionListener(e -> {
+                if (s.getRunning()) {
+                    if (s.isPaused()) {
+                        s.setPaused(false);
+                        b8.setBackground(null);
+                    } else {
+                        s.setPaused(true);
+                        b8.setOpaque(true);
+                        b8.setBackground(Color.yellow);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null,"Kan ikke sette på pause, måling ikke aktiv");
+
+                }
+                });
             JLabel l1 =new JLabel("Verdi: ");
-            labelCurrentValue =new JLabel("0.00");
-            labelCurrentValue.setPreferredSize(new Dimension(50,20));
-            JLabel l3 =new JLabel("kg");
+            labelCurrentValue = new JLabel("0.00");
+            labelCurrentValue.setPreferredSize(new Dimension(120,40));
+            labelCurrentValue.setHorizontalAlignment(SwingConstants.CENTER);
+            labelCurrentValue.setOpaque(true);
+            labelCurrentValue.setForeground(Color.blue);
+            labelCurrentValue.setBackground(Color.lightGray);
+            JLabel l3 =new JLabel("kg   ");
             JLabel l4 =new JLabel("Maks: ");
             labelMaxValue =new JLabel("0.00");
-            labelMaxValue.setPreferredSize(new Dimension(50,20));
-            JLabel l6 =new JLabel("kg");
-            JLabel l7 = new JLabel("Kalkulert nullpunkt: ");
+            labelMaxValue.setPreferredSize(new Dimension(120,40));
+            labelMaxValue.setHorizontalAlignment(SwingConstants.CENTER);
+            labelMaxValue.setOpaque(true);
+            labelMaxValue.setForeground(Color.blue);
+            labelMaxValue.setBackground(Color.lightGray);
+
+            JLabel l6 =new JLabel("kg   ");
+            JLabel l7 = new JLabel("Offset: ");
             labelOffsetValue = new JLabel(("0.00"));
-            labelOffsetValue.setPreferredSize(new Dimension(50,20));
-            JLabel l9 = new JLabel("kg");
+            labelOffsetValue.setPreferredSize(new Dimension(120,40));
+            labelOffsetValue.setHorizontalAlignment(SwingConstants.CENTER);
+            JLabel l9 = new JLabel("kg   ");
 
-            JPanel jPanel = new JPanel(); //Make the button panel
-            jPanel.add(b1);
-            jPanel.add(b2);
-            jPanel.add(b4);
-            jPanel.add(l1);
-            jPanel.add(labelCurrentValue);
-            jPanel.add(l3);
-            jPanel.add(l4);
-            jPanel.add(labelMaxValue);
-            jPanel.add(l6);
-            jPanel.add(l7);
-            jPanel.add(labelOffsetValue);
-            jPanel.add(l9);
-            jPanel.add(b3);
-            jPanel.add(b5);
-            jPanel.add(b6);
+            float fontSz = 26.0f;
+            labelCurrentValue.setFont (labelCurrentValue.getFont ().deriveFont (fontSz));
+            labelMaxValue.setFont (labelMaxValue.getFont ().deriveFont (fontSz));
+            labelOffsetValue.setFont (labelOffsetValue.getFont ().deriveFont (fontSz));
+            labelOffsetValue.setOpaque(true);
+            labelOffsetValue.setForeground(Color.blue);
+            labelOffsetValue.setBackground(Color.lightGray);
+            l1.setFont (l1.getFont ().deriveFont (fontSz));
+            l3.setFont (l3.getFont ().deriveFont (fontSz));
+            l4.setFont (l4.getFont ().deriveFont (fontSz));
+            l6.setFont (l6.getFont ().deriveFont (fontSz));
+            l7.setFont (l7.getFont ().deriveFont (fontSz));
+            l9.setFont (l7.getFont ().deriveFont (fontSz));
 
-            add(jPanel,BorderLayout.SOUTH);
+
+            JPanel labelPanel = new JPanel();
+            labelPanel.add(l1,BorderLayout.WEST);
+            labelPanel.add(labelCurrentValue,BorderLayout.WEST);
+            labelPanel.add(l3,BorderLayout.WEST);
+            labelPanel.add(l4,BorderLayout.WEST);
+            labelPanel.add(labelMaxValue,BorderLayout.WEST);
+            labelPanel.add(l6,BorderLayout.WEST);
+
+            labelPanel.add(l7,BorderLayout.EAST);
+            labelPanel.add(labelOffsetValue,BorderLayout.EAST);
+            labelPanel.add(l9,BorderLayout.EAST);
+
+
+            JPanel buttonPanel = new JPanel(); //Make the button panel
+            buttonPanel.add(b7);
+            buttonPanel.add(b8);
+            buttonPanel.add(b2);
+            buttonPanel.add(b4);
+
+
+            buttonPanel.add(b3);
+            buttonPanel.add(b6);
+
+            add(labelPanel,BorderLayout.CENTER);
+            add(buttonPanel,BorderLayout.SOUTH);
             pack();
             setTitle("Sematek Horisontal Strekkbenk");
             setLocationRelativeTo(null);
@@ -176,7 +279,6 @@ public class Grapher extends JFrame {
         }
 
         private JFreeChart createChart(XYDataset dataset) {
-
             JFreeChart chart = ChartFactory.createTimeSeriesChart(
                     "Målte strekkrefter",
                     "Tid (s)",
@@ -189,7 +291,7 @@ public class Grapher extends JFrame {
 
             plot = chart.getXYPlot();
 
-            XYSplineRenderer renderer = new XYSplineRenderer();
+            DefaultXYItemRenderer renderer = new DefaultXYItemRenderer();
             renderer.setSeriesPaint(0, Color.RED);
             renderer.setSeriesStroke(0, new BasicStroke(2.0f));
 
@@ -212,36 +314,8 @@ public class Grapher extends JFrame {
                             new Font("Serif", java.awt.Font.BOLD, 18)
                     )
             );
-
             return chart;
         }
 
-    private void storeDataSet(JFreeChart chart, String filename) {
-        java.util.List<String> csv = new ArrayList<>();
-        if (chart.getPlot() instanceof XYPlot) {
-            XYDataset xyDataset = chart.getXYPlot().getDataset();
-            int seriesCount = xyDataset.getSeriesCount();
-            for (int i = 0; i < seriesCount; i++) {
-                int itemCount = xyDataset.getItemCount(i);
-                for (int j = 0; j < itemCount; j++) {
-                    Comparable key = xyDataset.getSeriesKey(i);
-                    Number x = xyDataset.getX(i, j);
-                    Number y = xyDataset.getY(i, j);
-                    csv.add(String.format("%s, %s, %s", key, x, y));
-                }
-            }
-
-        }  else {
-            throw new IllegalStateException("Unknown dataset");
-        }
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".csv"))) {
-            for (String line : csv) {
-                writer.append(line);
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Cannot write dataset", e);
-        }
-    }
 
 }

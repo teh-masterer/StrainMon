@@ -14,17 +14,18 @@ import com.google.gson.GsonBuilder;
 public class Config {
 
     // Deklarere attributter
-    double CORRECTION_FACTOR;
-    double CORRECTION_OFFSET;
-    int SERIAL_GET_DATA_INTERVAL; // 6.5Hz refresh rate is equal to ~154ms
-    int BAUD_RATE;
-    int DATA_BITS;
-    int STOP_BITS;
-    int PARITY_BITS;
-    boolean SMOOTH_GRAPH;
-    boolean AUTO_ZERO_ON_START;
-    double USER_OFFSET;
-    int SMOOTHING_BUFFER_LENGTH;
+    final double CORRECTION_FACTOR;
+    final double CORRECTION_OFFSET;
+    final int SERIAL_GET_DATA_INTERVAL; // 6.5Hz refresh rate is equal to ~154ms
+    final int BAUD_RATE;
+    final int DATA_BITS;
+    final int STOP_BITS;
+    final int PARITY_BITS;
+    final boolean SMOOTH_GRAPH;
+    final boolean AUTO_ZERO_ON_START;
+    final double USER_OFFSET;
+    final int SMOOTHING_BUFFER_LENGTH;
+    String TIMESTAMP;
 
     public Config() {
         // Standardverdier i tilfelle config-filen ikke inneholder verdiene
@@ -38,7 +39,8 @@ public class Config {
         SMOOTH_GRAPH = false;
         USER_OFFSET = 0;
         SMOOTHING_BUFFER_LENGTH = 15;
-        AUTO_ZERO_ON_START = false;
+        AUTO_ZERO_ON_START = true;
+        TIMESTAMP = "default";
     }
 
     // DON'T TOUCH THE FOLLOWING CODE
@@ -65,8 +67,7 @@ public class Config {
     }
 
     private static Config fromDefaults() {
-        Config config = new Config();
-        return config;
+        return new Config();
     }
 
     public void toFile(String file) {

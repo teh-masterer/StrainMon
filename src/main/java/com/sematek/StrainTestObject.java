@@ -91,16 +91,6 @@ public class StrainTestObject {
         if (getMaxValue()< val) {
             setMaxValue(val);
         }
-        /*
-        invokeLater(() -> {
-        try {
-            getDataset().validateObject();
-        } catch (InvalidObjectException e) {
-            e.printStackTrace();
-        }
-        });
-
-         */
     }
 
 
@@ -161,13 +151,13 @@ public class StrainTestObject {
     }
 
     public double getMaxValue() {
-        return Double.parseDouble(g.labelMaxValue.getText());
+        return Double.parseDouble(g.maxLabel.getText());
     }
 
     public void setMaxValue(double maxValue) {
         maxValueLabel.setText(String.valueOf(maxValue));
         this.maxValue = maxValue;
-        g.labelMaxValue.setText(String.valueOf(Utils.round(maxValue,2)));
+        g.maxLabel.setText(String.valueOf(Utils.round(maxValue,2)));
 
     }
 
@@ -178,7 +168,7 @@ public class StrainTestObject {
     public void setCurrentValue(double currentValue) {
         currentValueLabel.setText(String.valueOf(Utils.round(currentValue,2)));
         this.currentValue = currentValue;
-        g.labelCurrentValue.setText(String.valueOf(Utils.round(currentValue,2)));
+        g.valueLabel.setText(String.valueOf(Utils.round(currentValue,2)));
 
     }
 
@@ -189,7 +179,7 @@ public class StrainTestObject {
     public void setOffsetValue(double offsetValue) {
         offsetValueLabel.setText(String.valueOf(offsetValue));
         this.offsetValue = offsetValue;
-        g.labelOffsetValue.setText(String.valueOf(Utils.round(offsetValue,2)));
+        g.offsetLabel.setText(String.valueOf(Utils.round(offsetValue,2)));
     }
 
 }

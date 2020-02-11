@@ -3,9 +3,11 @@ package com.sematek;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
+import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYDataset;
+import org.jfree.chart.ChartUtils;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -20,13 +22,7 @@ public class Utils {
 
     static final String FILENAME = "update.xls";
 
-    //For anonymous data sets
-    public static void storeDataSet(JFreeChart chart, String filename) {
-        java.util.List<String> csv = new ArrayList<>();
-        storeDataSet(chart, filename, csv);
-    }
-    //For data sets with metadata
-    private void storeDataSet(JFreeChart chart, String filename, StrainTestObject sto) {
+    public static void storeDataSet(JFreeChart chart, String filename, StrainTestObject sto) {
         java.util.List<String> csv = new ArrayList<>();
         csv.add(String.format("%s, %s", "testId", sto.getTestID()));
         csv.add(String.format("%s, %s", "customer", sto.getCustomer()));
@@ -67,9 +63,16 @@ public class Utils {
         }
     }
 
+    static void saveChartAsPng (ChartPanel chartPanel, String filename) throws IOException {
+        OutputStream out = new FileOutputStream(filename  + ".png");
+        ChartUtils.writeChartAsPNG(out,
+                chartPanel.getChart(),
+                chartPanel.getWidth(),
+                chartPanel.getHeight());
+    }
 
 
-    static void appendToExcelDatabase(StrainTestObject sto) {
+    static void appendToExcelDatabase(StrainTestObject sto, String timestamp) {
         if (sto.validateInput().equals("OK")) {
             try {
                 FileInputStream file = new FileInputStream(new File(FILENAME));
@@ -89,6 +92,7 @@ public class Utils {
                 newRow.createCell(5).setCellValue(sto.getTestComment());
                 newRow.createCell(6).setCellValue(sto.getOperator());
                 newRow.createCell(7).setCellValue(sto.getMaxValue());
+                newRow.createCell(8).setCellValue(timestamp);
                 file.close();
 
                 FileOutputStream outFile = new FileOutputStream(new File("update.xls"));

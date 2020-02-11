@@ -2,7 +2,6 @@ package com.sematek;
 
 import com.fazecast.jSerialComm.SerialPort;
 
-import java.io.InvalidObjectException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -81,6 +80,10 @@ public class SerialReader implements Runnable {
     public void end() {
         running.set(false);
         closePort();
+    }
+
+    public void pause() {
+        paused = true;
     }
 
     void initSerialReader() {

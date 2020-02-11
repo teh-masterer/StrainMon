@@ -12,15 +12,12 @@ public class Main {
 
         File jarPath=new File(Config.class.getProtectionDomain().getCodeSource().getLocation().getPath());
         String configPath=jarPath.getParentFile().getAbsolutePath() + File.separator + "config.json";
-        //Config.load("config.json");
         Config.load("config.json");
         System.out.println("Config file at " + configPath + " exists? " + new File(configPath).exists());
         Config.getInstance().TIMESTAMP = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date());
         Config.getInstance().toFile(configPath);
 
         EventQueue.invokeLater(() -> g.setVisible(true));
-        // Konfigurationsdatei laden, falls vorhanden
-        // ansonsten werden die Werte im Konstruktor verwendet
 
     }
 }

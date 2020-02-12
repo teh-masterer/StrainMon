@@ -30,6 +30,7 @@ public class Grapher extends JFrame {
     public JLabel valueLabel;   //These labels are updated from SerialReader class
     public JLabel maxLabel;
     public JLabel offsetLabel;
+    public JLabel extDataLbl;
 
     private StrainTestObject strainTestObject;
 
@@ -38,35 +39,35 @@ public class Grapher extends JFrame {
     }
 
     //Clicking the "Start" button determines if the Strain Test Object is populated with real data or not, before this method is called
-    private void startSerialReader()  {
-        if (s != null) {
-            if (s.comPort.isOpen()) { //Ensure port is ready
-                s.closePort();
+    private void startSerialReader() {
+        if (s != null && s.isComPortAvailable() && s.comPort.isOpen()) {
+            s.closePort();
+        }
+        s = new SerialReader(strainTestObject);//Make a new reader connection, give it access to data storage object
+        if (s.isComPortAvailable()) {
+            new Thread(s).start();
+            strainTestObject.removeAllSeries(); //reset the data if any, on start
+
+            series = new TimeSeries("Strekk");
+            dataset = new TimeSeriesCollection();
+            dataset.addSeries(series);
+            chart.getXYPlot().setDataset(dataset);
+
+            //dataset = strainTestObject.getDataset();
+            //series = (TimeSeries) dataset.getSeries();
+            //chart.getXYPlot().setDataset(dataset);
+            //dataset = strainTestObject.getDataset(); //load the dataset containing series to the graph
+            try {
+                dataset.validateObject();
+            } catch (InvalidObjectException e) {
+                e.printStackTrace();
             }
+            valueLabel.setText(String.valueOf(strainTestObject.getCurrentValue()));
+            offsetLabel.setText(String.valueOf(strainTestObject.getOffsetValue()));
+            maxLabel.setText(String.valueOf(strainTestObject.getMaxValue()));
+        } else {
+            JOptionPane.showMessageDialog(null, "Ingen serielinje-tilkobling funnet! (Du har glemt å plugge i kabelen)");
         }
-        s = new SerialReader(strainTestObject); //Make a new reader connection, give it access to data storage object
-        new Thread(s).start();
-        strainTestObject.removeAllSeries(); //reset the data if any, on start
-
-        //Following three lines only here for debug of STO
-
-        series = new TimeSeries("Strekk");
-        dataset = new TimeSeriesCollection();
-        dataset.addSeries(series);
-        chart.getXYPlot().setDataset(dataset);
-
-        //dataset = strainTestObject.getDataset();
-        //series = (TimeSeries) dataset.getSeries();
-        //chart.getXYPlot().setDataset(dataset);
-        //dataset = strainTestObject.getDataset(); //load the dataset containing series to the graph
-        try {
-            dataset.validateObject();
-        } catch (InvalidObjectException e) {
-            e.printStackTrace();
-        }
-        valueLabel.setText(String.valueOf(strainTestObject.getCurrentValue()));
-        offsetLabel.setText(String.valueOf(strainTestObject.getOffsetValue()));
-        maxLabel.setText(String.valueOf(strainTestObject.getMaxValue()));
     }
 
         private void initUI() {
@@ -237,7 +238,14 @@ public class Grapher extends JFrame {
                 }
             });
 
-            JLabel valueTxtLbl1 =new JLabel("Verdi: ");
+            JButton zeroExtBtn = new JButton("Nullstill ekstensiometer");
+            zeroExtBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
+            zeroExtBtn.addActionListener(e -> {
+                strainTestObject.setExtUserOffset(Double.parseDouble(extDataLbl.getText()));
+            });
+
+
+            JLabel valueTxtLbl1 =new JLabel("Verdi:");
             valueLabel = new JLabel("0.00");
             valueLabel.setPreferredSize(new Dimension(120,40));
             valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -245,7 +253,7 @@ public class Grapher extends JFrame {
             valueLabel.setForeground(Color.blue);
             valueLabel.setBackground(Color.lightGray);
             JLabel valueTxtLbl2 =new JLabel("kg   ");
-            JLabel maxTxtLbl1 =new JLabel("Maks: ");
+            JLabel maxTxtLbl1 =new JLabel("Maks:");
             maxLabel =new JLabel("0.00");
             maxLabel.setPreferredSize(new Dimension(120,40));
             maxLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -254,7 +262,7 @@ public class Grapher extends JFrame {
             maxLabel.setBackground(Color.lightGray);
 
             JLabel maxTxtLbl2 =new JLabel("kg   ");
-            JLabel offsetTxtLbl1 = new JLabel("Offset: ");
+            JLabel offsetTxtLbl1 = new JLabel("Offset:");
             offsetLabel = new JLabel(("0.00"));
             offsetLabel.setPreferredSize(new Dimension(120,40));
             offsetLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -274,6 +282,20 @@ public class Grapher extends JFrame {
             offsetTxtLbl1.setFont (offsetTxtLbl1.getFont ().deriveFont (fontSz));
             offsetTxtLbl2.setFont (offsetTxtLbl1.getFont ().deriveFont (fontSz));
 
+            extDataLbl = new JLabel("0.0");
+            JLabel extUnitLbl = new JLabel("mm");
+            JLabel extTextLbl = new JLabel("Forlengelse:");
+            extDataLbl.setPreferredSize(new Dimension(120,40));
+            extDataLbl.setHorizontalAlignment(SwingConstants.CENTER);
+            extDataLbl.setOpaque(true);
+            extDataLbl.setForeground(Color.blue);
+            extDataLbl.setBackground(Color.lightGray);
+            extDataLbl.setFont(extDataLbl.getFont().deriveFont(fontSz));
+
+            extUnitLbl.setFont(extUnitLbl.getFont().deriveFont(fontSz));
+            extTextLbl.setFont(extTextLbl.getFont().deriveFont(fontSz));
+
+
 
             JPanel labelPanel = new JPanel();
             labelPanel.add(valueTxtLbl1,BorderLayout.WEST);
@@ -287,6 +309,10 @@ public class Grapher extends JFrame {
             labelPanel.add(offsetLabel,BorderLayout.EAST);
             labelPanel.add(offsetTxtLbl2,BorderLayout.EAST);
 
+            labelPanel.add(extTextLbl,BorderLayout.EAST);
+            labelPanel.add(extDataLbl,BorderLayout.EAST);
+            labelPanel.add(extUnitLbl,BorderLayout.EAST);
+
 
             JPanel buttonPanel = new JPanel(); //Make the button panel
             buttonPanel.add(startBtn);
@@ -296,6 +322,8 @@ public class Grapher extends JFrame {
 
             buttonPanel.add(saveBtn);
             buttonPanel.add(infoBtn);
+
+            buttonPanel.add(zeroExtBtn);
 
             add(labelPanel,BorderLayout.CENTER);
             add(buttonPanel,BorderLayout.SOUTH);

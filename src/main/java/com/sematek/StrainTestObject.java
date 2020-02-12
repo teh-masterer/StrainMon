@@ -6,6 +6,8 @@ import org.jfree.data.time.TimeSeriesCollection;
 
 import javax.swing.*;
 
+import java.util.HashMap;
+
 import static java.awt.EventQueue.invokeLater;
 
 
@@ -29,6 +31,20 @@ public class StrainTestObject {
 
     private final TimeSeries series;
     public final TimeSeriesCollection dataset;
+
+    HashMap<Long, Double> extValues;
+
+    double recentExtVal;
+
+    public double getExtUserOffset() {
+        return extUserOffset;
+    }
+
+    public void setExtUserOffset(double extUserOffset) {
+        this.extUserOffset = extUserOffset;
+    }
+
+    double extUserOffset;
 
     private Grapher g;
 
@@ -72,6 +88,9 @@ public class StrainTestObject {
         currentValueLabel = new JLabel("0.00");
         maxValueLabel = new JLabel("0.00");
         offsetValueLabel = new JLabel("0.00");
+
+        recentExtVal = 0;
+        extUserOffset = 0;
     }
 
     public StrainTestObject(Grapher g) {
@@ -91,6 +110,14 @@ public class StrainTestObject {
         if (getMaxValue()< val) {
             setMaxValue(val);
         }
+    }
+
+    void updateExtensiometerData(String s) {
+        //extValues.put(System.currentTimeMillis(),Double.parseDouble(s));
+        recentExtVal = Double.parseDouble(s);
+  //      Double correctedVal = extVal + extUserOffset;
+        g.extDataLbl.setText(String.valueOf(recentExtVal-extUserOffset));
+        System.out.println("Extension: " + s + " " + recentExtVal);
     }
 
 

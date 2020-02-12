@@ -1,6 +1,8 @@
 package com.sematek;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -33,6 +35,7 @@ public class SerialReader implements Runnable {
     int fullScale, inputSensibility, baudRate;
 
     SerialPort comPort;
+    SerialPort comPortArduino;
     final StrainTestObject sto;
 
     SerialReader(StrainTestObject sto) {
@@ -51,13 +54,13 @@ public class SerialReader implements Runnable {
 
         this.sto = sto;
         lastReadTime = System.currentTimeMillis();
-        initSerialReader();
         recentValues = new double[SMOOTHING_BUFFER_LENGTH];
         Arrays.fill(recentValues, 0);
         paused = false;
     }
 
     public void run() {
+        initSerialReader();
         running.set(true); // setting a boolean so that the GUI can know if running, and kill the process
         try {
             getDeviceConfig();
@@ -67,8 +70,14 @@ public class SerialReader implements Runnable {
         while (running.get()) {
             if (!paused) {
                 try {
-                    processReadData(readAndWriteFromSerial("$DA" + deviceId + "?\r"));
+                    //readAndWriteFromSerial(comPort,"$DA" + deviceId + "?\r");
+                    processReadData(readAndWriteFromSerial(comPort,"$DA" + deviceId + "?\r"));
+                    //sto.updateExtensiometerData(readFromSerial(comPortArduino));
                     Thread.sleep(SERIAL_GET_DATA_INTERVAL);
+
+                    if (comPortArduino != null && !comPortArduino.isOpen()) {
+                        comPortArduino.openPort();
+                    }
                 } catch (InterruptedException e) {
                     System.out.println("Thread was interrupted!");
                 }
@@ -86,28 +95,111 @@ public class SerialReader implements Runnable {
         paused = true;
     }
 
-    void initSerialReader() {
-        comPort = SerialPort.getCommPorts()[0]; //Open whatever's available
-        comPort.setComPortParameters(BAUD_RATE, DATA_BITS, STOP_BITS, PARITY_BITS);
-        comPort.openPort();
+    boolean isComPortAvailable() {
+        return (SerialPort.getCommPorts().length > 0);
+    }
 
-        if (comPort.openPort()) {
-            System.out.println("Port is open :)");
-        } else {
-            System.out.println("Failed to open port :(");
+    void initSerialReader() {
+        for (SerialPort s : SerialPort.getCommPorts()) {
+            System.out.println("Connected device found: " + s.getDescriptivePortName());
+            if (s.getDescriptivePortName().contains("Arduino Uno")) {
+                comPortArduino = s;
+                comPortArduino.setComPortParameters(BAUD_RATE, DATA_BITS, STOP_BITS, PARITY_BITS);
+                System.out.println("Arduino COM connected to " + comPortArduino.getDescriptivePortName() + ", " + comPortArduino.getPortDescription() + " at " + comPortArduino.getBaudRate());
+
+                if (comPortArduino.openPort()) {
+                    System.out.println("Arduino COM port is open :)");
+
+                    comPortArduino.addDataListener(new SerialPortDataListener() {
+                        private String messages = "";
+
+                        @Override
+                        public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_RECEIVED; }
+
+                        @Override
+                        public void serialEvent(SerialPortEvent event) {
+                            messages += new String(event.getReceivedData());
+                            while (messages.contains("\n")) {
+                                String[] message = messages.split("\\n", 2);
+                                messages = (message.length > 1) ? message[1] : "";
+                                System.out.println("Message: " + message[0]);
+                                sto.updateExtensiometerData(message[0]);
+                            }
+                        }
+                    });
+                    /*
+                    comPortArduino.addDataListener(new SerialPortDataListener() {
+                        @Override
+                        public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_AVAILABLE; }
+                        @Override
+                        public void serialEvent(SerialPortEvent event)
+                        {
+                            if (event.getEventType() != SerialPort.LISTENING_EVENT_DATA_AVAILABLE)
+                                return;
+                            byte[] newData = new byte[comPortArduino.bytesAvailable()];
+                            sto.updateExtensiometerData(new String(newData, StandardCharsets.US_ASCII)); ;
+                        }
+                    });
+                     */
+                } else {
+                    System.out.println("Failed to open Arduino COM port");
+                }
+            } else if (s.getDescriptivePortName().contains("ATEN USB to Serial Bridge")) {
+                comPort = s;
+                comPort.setComPortParameters(BAUD_RATE, DATA_BITS, STOP_BITS, PARITY_BITS);
+                System.out.println("Main COM connected to " + comPort.getDescriptivePortName() + ", " + comPort.getPortDescription() + " at " + comPort.getBaudRate());
+                if (comPort.openPort()) {
+                    System.out.println("Main COM port is open :)");
+
+                    /*
+                    comPort.addDataListener(new SerialPortDataListener() {
+                        private String messages = "";
+
+                        @Override
+                        public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_RECEIVED; }
+
+                        @Override
+                        public void serialEvent(SerialPortEvent event) {
+                            messages += new String(event.getReceivedData());
+                            while (messages.contains("\n")) {
+                                String[] message = messages.split("\\n", 2);
+                                messages = (message.length > 1) ? message[1] : "";
+                                System.out.println("Message: " + message[0]);
+                            }
+                        }
+                    });
+
+
+                    comPort.addDataListener(new SerialPortDataListener() {
+                        @Override
+                        public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_RECEIVED; }
+                        @Override
+                        public void serialEvent(SerialPortEvent event)
+                        {
+                            if (event.getEventType() != SerialPort.LISTENING_EVENT_DATA_AVAILABLE)
+                                return;
+                            byte[] newData = new byte[comPort.bytesAvailable()];
+                            processReadData(new String(newData, StandardCharsets.US_ASCII)); ;
+                        }
+                    });
+                     */
+                } else {
+                    System.out.println("Failed to open main COM port :(");
+                }
+            }
         }
     }
 
     void getDeviceConfig() throws InterruptedException {
         String digitalFilterRaw, baudRateRaw, fullScaleRaw, inputSensibilityRaw; //config data from connected board
 
-        deviceId = readAndWriteFromSerial("$ID?\r").substring(1, 3);
-        digitalFilterRaw = trim(readAndWriteFromSerial("$FD" + deviceId + "?\r").substring(3));
-        baudRateRaw = trim(readAndWriteFromSerial("$BD" + deviceId + "?\r").substring(3));
-        resolution = trim(readAndWriteFromSerial("$RD" + deviceId + "?\r").substring(3));
-        fullScaleRaw = trim(readAndWriteFromSerial("$CP" + deviceId + "?\r").substring(3));
-        inputSensibilityRaw = trim(readAndWriteFromSerial("$SE" + deviceId + "?\r").substring(3));
-        instrumentVersion = trim(readAndWriteFromSerial("$TY" + deviceId + "?\r").substring(3));
+        deviceId = readAndWriteFromSerial(comPort,"$ID?\r").substring(1, 3);
+        digitalFilterRaw = trim(readAndWriteFromSerial(comPort,"$FD" + deviceId + "?\r").substring(3));
+        baudRateRaw = trim(readAndWriteFromSerial(comPort,"$BD" + deviceId + "?\r").substring(3));
+        resolution = trim(readAndWriteFromSerial(comPort,"$RD" + deviceId + "?\r").substring(3));
+        fullScaleRaw = trim(readAndWriteFromSerial(comPort,"$CP" + deviceId + "?\r").substring(3));
+        inputSensibilityRaw = trim(readAndWriteFromSerial(comPort,"$SE" + deviceId + "?\r").substring(3));
+        instrumentVersion = trim(readAndWriteFromSerial(comPort,"$TY" + deviceId + "?\r").substring(3));
 
         fullScale = Integer.parseInt(fullScaleRaw);
         inputSensibility = Integer.parseInt(inputSensibilityRaw);
@@ -168,19 +260,29 @@ public class SerialReader implements Runnable {
         System.out.println("FW: " + instrumentVersion + "\tRESOLUTION: " + resolution + "\tSCALE: " + fullScale);
     }
 
-    String readAndWriteFromSerial(String out) throws InterruptedException {
-        if (comPort.isOpen()) {
-            comPort.writeBytes(out.getBytes(), out.getBytes().length);
-            while (comPort.bytesAvailable() == 0) {
+    String readFromSerial(SerialPort p) throws InterruptedException {
+        if (p.isOpen()) {
+            while (p.bytesAvailable() == 0) {
                 Thread.sleep(20);
             }
-            byte[] readBuffer = new byte[comPort.bytesAvailable()];
-            comPort.readBytes(readBuffer, readBuffer.length);
-            System.out.println(new String(readBuffer, StandardCharsets.US_ASCII));
+            byte[] readBuffer = new byte[p.bytesAvailable()];
+            p.readBytes(readBuffer, readBuffer.length);
             return new String(readBuffer, StandardCharsets.US_ASCII);
         } else {
             return null;
         }
+    }
+    void writeToSerial(SerialPort p, String out){
+        if (p.isOpen()) {
+            p.writeBytes(out.getBytes(), out.getBytes().length);
+        }
+    }
+
+    String readAndWriteFromSerial(SerialPort p, String out) throws InterruptedException {
+        if (p.isOpen()) {
+            p.writeBytes(out.getBytes(), out.getBytes().length);
+        }
+        return  readFromSerial(comPort);
     }
 
     void processReadData(String in) {

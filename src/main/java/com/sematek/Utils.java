@@ -20,7 +20,9 @@ import java.util.List;
 
 public class Utils {
 
-    static final String FILENAME = "update.xls";
+    static final String FILENAME = System.getProperty("user.home") + File.separator + "tests" + File.separator + "update.xls";
+    static final String METADATA_PATH = System.getProperty("user.home") + File.separator + "tests" + File.separator + "metadata";
+
 
     public static void storeDataSet(JFreeChart chart, String filename, StrainTestObject sto) {
         java.util.List<String> csv = new ArrayList<>();
@@ -36,6 +38,54 @@ public class Utils {
         storeDataSet(chart, filename, csv);
     }
 
+    public static void saveMetadata(StrainTestObject sto) {
+        java.util.List<String> csv = new ArrayList<>();
+        csv.add(String.format("%s, %s", "testId", sto.getTestID()));
+        csv.add(String.format("%s, %s", "customer", sto.getCustomer()));
+        csv.add(String.format("%s, %s", "locale", sto.getLocale()));
+        csv.add(String.format("%s, %s", "specimenType", sto.getSpecimenType()));
+        csv.add(String.format("%s, %s", "specimenName", sto.getSpecimenName()));
+        csv.add(String.format("%s, %s", "testComment", sto.getTestComment()));
+        csv.add(String.format("%s, %s", "operator", sto.getOperator()));
+        csv.add(String.format("%s, %s", "maxValue", sto.getMaxValue()));
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(METADATA_PATH + ".csv"))) {
+            for (String line : csv) {
+                writer.append(line);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot write dataset", e);
+        }
+
+    }
+    public static String[][] loadMetadata(Grapher g) {
+        String csvFile = METADATA_PATH + ".csv";
+        String line = "";
+        String cvsSplitBy = ",";
+        String[][] metadata = new String[10][2];
+        int lineCounter = 0;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+
+            while ((line = br.readLine()) != null) {
+
+                // use comma as separator
+                String[] newLine = line.split(cvsSplitBy);
+                for (String s : newLine) {
+                    System.out.println(s);
+                }
+                metadata[lineCounter] = newLine;
+                lineCounter++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Couldn't find metadata file!");
+        }
+        return metadata;
+    }
+
+
     private static void storeDataSet(JFreeChart chart, String filename, List<String> csv) {
         if (chart.getPlot() instanceof XYPlot) {
             XYDataset xyDataset = chart.getXYPlot().getDataset();
@@ -43,7 +93,6 @@ public class Utils {
             for (int i = 0; i < seriesCount; i++) {
                 int itemCount = xyDataset.getItemCount(i);
                 for (int j = 0; j < itemCount; j++) {
-                    Comparable key = xyDataset.getSeriesKey(i);
                     Number x = xyDataset.getX(i, j);
                     Number y = xyDataset.getY(i, j);
                     csv.add(String.format("%s, %s", x, y));
@@ -107,9 +156,23 @@ public class Utils {
         }
     }
     public static String findPreviousTestId () throws IOException {
-        FileInputStream file = new FileInputStream(new File(FILENAME));
+        String err = "Ukjent";
+        String ret;
+        FileInputStream file;
+        try {
+            file = new FileInputStream(new File(FILENAME));
+        } catch (FileNotFoundException e) {
+            System.out.println("Excel file not found at " + FILENAME);
+            return err;
+        }
         HSSFSheet sheet = new HSSFWorkbook(file).getSheetAt(0);
-        return sheet.getRow(sheet.getLastRowNum()).getCell(0).toString();
+        try {
+            ret = sheet.getRow(sheet.getLastRowNum()).getCell(0).toString();
+        } catch (NumberFormatException e) {
+            System.out.println("Could not read number from test log excel-file!");
+            return err;
+        }
+        return ret;
     }
     public static double round(double value, int places) {
         if (places < 0) throw new IllegalArgumentException();

@@ -102,7 +102,7 @@ public class SerialReader implements Runnable {
     void initSerialReader() {
         for (SerialPort s : SerialPort.getCommPorts()) {
             System.out.println("Connected device found: " + s.getDescriptivePortName());
-            if (s.getDescriptivePortName().contains("Arduino Uno")) {
+            if (s.getDescriptivePortName().contains("Arduino Uno") || s.getDescriptivePortName().contains("USB-Based Serial Port")) {
                 comPortArduino = s;
                 comPortArduino.setComPortParameters(BAUD_RATE, DATA_BITS, STOP_BITS, PARITY_BITS);
                 System.out.println("Arduino COM connected to " + comPortArduino.getDescriptivePortName() + ", " + comPortArduino.getPortDescription() + " at " + comPortArduino.getBaudRate());
@@ -122,7 +122,6 @@ public class SerialReader implements Runnable {
                             while (messages.contains("\n")) {
                                 String[] message = messages.split("\\n", 2);
                                 messages = (message.length > 1) ? message[1] : "";
-                                System.out.println("Message: " + message[0]);
                                 sto.updateExtensiometerData(message[0]);
                             }
                         }
@@ -144,7 +143,7 @@ public class SerialReader implements Runnable {
                 } else {
                     System.out.println("Failed to open Arduino COM port");
                 }
-            } else if (s.getDescriptivePortName().contains("ATEN USB to Serial Bridge")) {
+            } else if (s.getDescriptivePortName().contains("ATEN USB to Serial Bridge") || s.getDescriptivePortName().contains("USB-to-Serial Port")) {
                 comPort = s;
                 comPort.setComPortParameters(BAUD_RATE, DATA_BITS, STOP_BITS, PARITY_BITS);
                 System.out.println("Main COM connected to " + comPort.getDescriptivePortName() + ", " + comPort.getPortDescription() + " at " + comPort.getBaudRate());

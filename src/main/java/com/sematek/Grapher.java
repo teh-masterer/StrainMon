@@ -47,6 +47,7 @@ public class Grapher extends JFrame {
         if (s.isComPortAvailable()) {
             new Thread(s).start();
             strainTestObject.removeAllSeries(); //reset the data if any, on start
+            strainTestObject.setMaxValue(0);
 
             series = new TimeSeries("Strekk");
             dataset = new TimeSeriesCollection();
@@ -81,22 +82,149 @@ public class Grapher extends JFrame {
 
             NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
             rangeAxis.setStandardTickUnits(NumberAxis.createStandardTickUnits());
+
+            BlinkButton startBtn = new BlinkButton("Start...");
+            BlinkButton stopBtn = new BlinkButton("Stopp");
+            JButton saveBtn=new JButton("Lagre...");
+            JButton zeroBtn = new JButton("Nullstill");
+            JButton infoBtn = new JButton("Enhetsinfo...");
+
+
+
+
+
+            startBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+            startBtn.addActionListener(e -> {
+                String tauString = "Tau";
+                String kjettingString = "Kjetting";
+                String annetString = "Annet";
+                String specimenType = tauString;
+
+                if (s != null && s.isPaused()) {
+                    stopBtn.setBlinking(false);
+                    s.setPaused(false);
+                } else {
+
+                    JTextField testIDField = new JTextField(5);
+                    JTextField customerField = new JTextField(5);
+                    //JTextField specimenTypeField = new JTextField(5);
+                    JRadioButton tauRadioButton = new JRadioButton(tauString);
+                    tauRadioButton.setActionCommand(tauString);
+                    tauRadioButton.setSelected(true);
+                    JRadioButton kjettingRadioButton = new JRadioButton(kjettingString);
+                    kjettingRadioButton.setActionCommand(kjettingString);
+                    JRadioButton annetRadioButton = new JRadioButton(annetString);
+                    JTextField specimenNameField = new JTextField(5);
+                    JTextField testCommentField = new JTextField(5);
+                    JTextField operatorField = new JTextField(5);
+                    JTextField localeField = new JTextField(5);
+
+                    ButtonGroup specimenTypeGroup = new ButtonGroup();
+                    specimenTypeGroup.add(tauRadioButton);
+                    specimenTypeGroup.add(kjettingRadioButton);
+                    specimenTypeGroup.add(annetRadioButton);
+
+
+                    if (kjettingRadioButton.isSelected()) {
+                        specimenType = kjettingString;
+                    } else if (tauRadioButton.isSelected()){
+                        specimenType = tauString;
+                    } else {
+                        specimenType = annetString;
+                    }
+
+                    try {
+                        testIDField.setText(String.valueOf(Integer.parseInt(Utils.findPreviousTestId()) + 1));
+                    } catch (IOException | NumberFormatException ex) {
+                        System.out.println("Could not find previous test ID!");
+                        try {
+                            testIDField.setText(Utils.findPreviousTestId());
+                        } catch (IOException exc) {
+                            exc.printStackTrace();
+                        }
+                        ex.printStackTrace();
+                    }
+
+                    JPanel radioButtonPanel = new JPanel();
+                    radioButtonPanel.setLayout(new FlowLayout());
+                    radioButtonPanel.add(tauRadioButton);
+                    radioButtonPanel.add(kjettingRadioButton);
+                    radioButtonPanel.add(annetRadioButton);
+                    //Perhaps all of this should be dynamically pulled from StrainTestObject? For now it isn't.
+                    JPanel myPanel = new JPanel();
+                    myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.PAGE_AXIS));
+
+                    myPanel.add(new JLabel("Test-ID: "));
+                    myPanel.add(testIDField);
+
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Kunde: "));
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(customerField);
+                    myPanel.add(new JLabel("Lokalitet: "));
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(localeField);
+                    myPanel.add(new JLabel("Prøvetype: "));
+                    myPanel.add(radioButtonPanel);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Linenummer: "));
+                    myPanel.add(specimenNameField);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Kommentar: "));
+                    myPanel.add(testCommentField);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Operatør: "));
+                    myPanel.add(operatorField);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+
+                    String[][] metadata = Utils.loadMetadata(this);
+                    if (metadata[6][0].length() > 0) {
+                        testIDField.setText(metadata[0][1]);
+                        customerField.setText(metadata[2][1]);
+                        localeField.setText(metadata[3][1]);
+                        specimenNameField.setText(metadata[4][1]);
+                        testCommentField.setText(metadata[5][1]);
+                        operatorField.setText(metadata[6][1]);
+                    }
+                    int result = JOptionPane.showConfirmDialog(null, myPanel,
+                            "Sleng inn testdata!", JOptionPane.OK_CANCEL_OPTION);
+                    if (result == JOptionPane.OK_OPTION) {
+                        strainTestObject = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
+                        JOptionPane.showMessageDialog(null, strainTestObject.validateInput());
+                        if (strainTestObject.validateInput().equals("OK")) {
+                            startSerialReader();
+                            startBtn.setBlinking(true);
+                            Utils.saveMetadata(strainTestObject);
+                        } else {
+                            startBtn.doClick();
+                        }
+                    /*System.out.println("ID: " + testIDField.getText() + "\tKunde: " + customerField.getText() + "\tLokalitet: " + localeField.getText() + "\tType: " +
+                            specimenTypeField.getText() + "\tNavn: " + specimenNameField.getText() + "\tKommentar: " + testCommentField.getText() +
+                            "\tOperatør: " + operatorField.getText());
+                    //Copy text from fields to String variables in global scope */
+
+                    } else {
+                        strainTestObject = new StrainTestObject(this);
+                        startSerialReader();
+                        startBtn.setBlinking(true);
+                    }
+                }
+            });
+
+
             rangeAxis.setAutoRangeMinimumSize(200);
-            JButton stopBtn = new JButton("Stopp");
             stopBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             stopBtn.addActionListener(e -> {
                 if (s.isPaused()) {
+                    stopBtn.setBlinking(false);
                     s.setPaused(false);
-                    stopBtn.setBackground(null);
                     s.end();
                 } else {
+                    stopBtn.setBlinking(true);
+                    startBtn.setBlinking(false);
                     s.pause();
-                    stopBtn.setOpaque(true);
-                    stopBtn.setBackground(Color.yellow);
-
                 }
             });
-            JButton saveBtn=new JButton("Lagre...");
             saveBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             saveBtn.addActionListener(e -> {
                 File directory = new File(System.getProperty("user.home") + File.separator + "tests");
@@ -109,21 +237,14 @@ public class Grapher extends JFrame {
                 DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH_mm_ss");
                 String timestamp = myDateObj.format(myFormatObj);
 
-
                 if (strainTestObject.validateInput().equals("OK")) {
-                    try {
-                        filenameString = (Integer.parseInt(Utils.findPreviousTestId()) + 1) + "__" + timestamp;
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                } else {
-                    filenameString = "new_test__" + timestamp;
+                    filenameString = (strainTestObject.getTestID() +1);
                 }
 
                 final JFileChooser fc = new JFileChooser();
                 fc.setCurrentDirectory(new File(System.getProperty("user.home") + File.separator + "tests"));
                 fc.setDialogTitle("Specify a file to save");
-                fc.setSelectedFile(new File(filenameString));
+                fc.setSelectedFile(new File(filenameString + "__" + timestamp));
 
 
                 int userSelection = fc.showSaveDialog(saveBtn);
@@ -142,7 +263,6 @@ public class Grapher extends JFrame {
 
                 }
                 });
-            JButton zeroBtn = new JButton("Nullstill");
             zeroBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             zeroBtn.addActionListener(e -> {
                 if (s.getRunning()) {
@@ -154,79 +274,8 @@ public class Grapher extends JFrame {
                 }
             });
 
-            JButton startBtn = new JButton("Start...");
-            startBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-            startBtn.addActionListener(e -> {
-                if (s != null && s.isPaused()) {
-                    s.setPaused(false);
-                } else {
-
-                    JTextField testIDField = new JTextField(5);
-                    JTextField customerField = new JTextField(5);
-                    JTextField specimenTypeField = new JTextField(5);
-                    JTextField specimenNameField = new JTextField(5);
-                    JTextField testCommentField = new JTextField(5);
-                    JTextField operatorField = new JTextField(5);
-                    JTextField localeField = new JTextField(5);
-
-                    try {
-                        testIDField.setText(String.valueOf(Integer.parseInt(Utils.findPreviousTestId()) + 1));
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-
-                    //Perhaps all of this should be dynamically pulled from StrainTestObject? For now it isn't.
-                    JPanel myPanel = new JPanel();
-                    myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.PAGE_AXIS));
-
-                    myPanel.add(new JLabel("Test-ID: "));
-                    myPanel.add(testIDField);
-
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Kunde: "));
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(customerField);
-                    myPanel.add(new JLabel("Lokalitet: "));
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(localeField);
-                    myPanel.add(new JLabel("Prøvetype: "));
-                    myPanel.add(specimenTypeField);
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Linenummer: "));
-                    myPanel.add(specimenNameField);
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Kommentar: "));
-                    myPanel.add(testCommentField);
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Operatør: "));
-                    myPanel.add(operatorField);
-                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
 
 
-                    int result = JOptionPane.showConfirmDialog(null, myPanel,
-                            "Sleng inn testdata her", JOptionPane.OK_CANCEL_OPTION);
-                    if (result == JOptionPane.OK_OPTION) {
-                        strainTestObject = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenTypeField.getText(), specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
-                        JOptionPane.showMessageDialog(null, strainTestObject.validateInput());
-                        if (strainTestObject.validateInput().equals("OK")) {
-                            startSerialReader();
-                        } else {
-                            startBtn.doClick();
-                        }
-                    /*System.out.println("ID: " + testIDField.getText() + "\tKunde: " + customerField.getText() + "\tLokalitet: " + localeField.getText() + "\tType: " +
-                            specimenTypeField.getText() + "\tNavn: " + specimenNameField.getText() + "\tKommentar: " + testCommentField.getText() +
-                            "\tOperatør: " + operatorField.getText());
-                    //Copy text from fields to String variables in global scope */
-
-                    } else {
-                        strainTestObject = new StrainTestObject(this);
-                        startSerialReader();
-                    }
-                }
-            });
-
-
-            JButton infoBtn = new JButton("Enhetsinfo...");
             infoBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             infoBtn.addActionListener(e -> {
                 if (s.getRunning()) {
@@ -238,33 +287,33 @@ public class Grapher extends JFrame {
                 }
             });
 
-            JButton zeroExtBtn = new JButton("Nullstill ekstensiometer");
+            JButton zeroExtBtn = new JButton("Null ekst.");
             zeroExtBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             zeroExtBtn.addActionListener(e -> {
                 strainTestObject.setExtUserOffset(Double.parseDouble(extDataLbl.getText()));
             });
 
 
-            JLabel valueTxtLbl1 =new JLabel("Verdi:");
+            JLabel valueTxtLbl1 =new JLabel("Verdi ");
             valueLabel = new JLabel("0.00");
-            valueLabel.setPreferredSize(new Dimension(120,40));
+            valueLabel.setPreferredSize(new Dimension(150,40));
             valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
             valueLabel.setOpaque(true);
             valueLabel.setForeground(Color.blue);
             valueLabel.setBackground(Color.lightGray);
             JLabel valueTxtLbl2 =new JLabel("kg   ");
-            JLabel maxTxtLbl1 =new JLabel("Maks:");
+            JLabel maxTxtLbl1 =new JLabel("Maks ");
             maxLabel =new JLabel("0.00");
-            maxLabel.setPreferredSize(new Dimension(120,40));
+            maxLabel.setPreferredSize(new Dimension(150,40));
             maxLabel.setHorizontalAlignment(SwingConstants.CENTER);
             maxLabel.setOpaque(true);
             maxLabel.setForeground(Color.blue);
             maxLabel.setBackground(Color.lightGray);
 
             JLabel maxTxtLbl2 =new JLabel("kg   ");
-            JLabel offsetTxtLbl1 = new JLabel("Offset:");
+            JLabel offsetTxtLbl1 = new JLabel("Offset ");
             offsetLabel = new JLabel(("0.00"));
-            offsetLabel.setPreferredSize(new Dimension(120,40));
+            offsetLabel.setPreferredSize(new Dimension(150,40));
             offsetLabel.setHorizontalAlignment(SwingConstants.CENTER);
             JLabel offsetTxtLbl2 = new JLabel("kg   ");
 
@@ -284,8 +333,8 @@ public class Grapher extends JFrame {
 
             extDataLbl = new JLabel("0.0");
             JLabel extUnitLbl = new JLabel("mm");
-            JLabel extTextLbl = new JLabel("Forlengelse:");
-            extDataLbl.setPreferredSize(new Dimension(120,40));
+            JLabel extTextLbl = new JLabel("Ekst. ");
+            extDataLbl.setPreferredSize(new Dimension(150,40));
             extDataLbl.setHorizontalAlignment(SwingConstants.CENTER);
             extDataLbl.setOpaque(true);
             extDataLbl.setForeground(Color.blue);

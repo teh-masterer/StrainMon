@@ -21,7 +21,6 @@ public class StrainTestObject {
     private String operator;
     private final String locale;
 
-    private double maxValue;
     private double currentValue;
     private double offsetValue;
 
@@ -32,16 +31,13 @@ public class StrainTestObject {
     private final TimeSeries series;
     public final TimeSeriesCollection dataset;
 
-    HashMap<Long, Double> extValues;
 
     double recentExtVal;
 
-    public double getExtUserOffset() {
-        return extUserOffset;
-    }
 
     public void setExtUserOffset(double extUserOffset) {
         this.extUserOffset = extUserOffset;
+        g.extDataLbl.setText(String.valueOf(Utils.round((recentExtVal-extUserOffset),1)));
     }
 
     double extUserOffset;
@@ -113,11 +109,9 @@ public class StrainTestObject {
     }
 
     void updateExtensiometerData(String s) {
-        //extValues.put(System.currentTimeMillis(),Double.parseDouble(s));
         recentExtVal = Double.parseDouble(s);
-  //      Double correctedVal = extVal + extUserOffset;
-        g.extDataLbl.setText(String.valueOf(recentExtVal-extUserOffset));
-        System.out.println("Extension: " + s + " " + recentExtVal);
+        g.extDataLbl.setText(String.valueOf(Utils.round((recentExtVal-extUserOffset),2)));
+        System.out.println("Extension: " + s + " " + recentExtVal + ", displayed: " + (recentExtVal-extUserOffset));
     }
 
 
@@ -183,7 +177,6 @@ public class StrainTestObject {
 
     public void setMaxValue(double maxValue) {
         maxValueLabel.setText(String.valueOf(maxValue));
-        this.maxValue = maxValue;
         g.maxLabel.setText(String.valueOf(Utils.round(maxValue,2)));
 
     }

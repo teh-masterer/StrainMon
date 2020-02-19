@@ -61,7 +61,13 @@ public class Config {
         // no config file found
         if (instance == null) {
             instance = fromDefaults();
+            System.out.println("Config loaded default values");
+        } else {
+            System.out.println("Config loaded value from file.");
         }
+    }
+    public static void load() {
+        load(new File(Utils.CONFIG_PATH + File.separator + Utils.CONFIG_FILENAME));
     }
 
     public static void load(String file) {
@@ -87,7 +93,21 @@ public class Config {
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
+                //Creating the directory
+            boolean bool = false;
+            bool = file.getParentFile().getParentFile().mkdir();
+            bool = file.getParentFile().mkdir();
+                if(bool){
+                    System.out.println("Config directory created successfully");
+                }else{
+                    System.out.println("Sorry, couldn’t create config directory");
+                    e.printStackTrace();
+                }
+            }
         }
+
+    public void toFile() {
+        toFile(new File(Utils.CONFIG_PATH + File.separator + Utils.CONFIG_FILENAME));
     }
 
     private static Config fromFile(File configFile) {
@@ -96,6 +116,10 @@ public class Config {
             BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(configFile)));
             return gson.fromJson(reader, Config.class);
         } catch (FileNotFoundException e) {
+            if (new File(Utils.CONFIG_PATH + File.separator + Utils.CONFIG_FILENAME).exists()) {
+                System.out.println("Config file not found at" + Utils.CONFIG_PATH + File.separator + Utils.CONFIG_FILENAME);
+            }
+            System.out.println("Error initializing config data.");
             return null;
         }
     }

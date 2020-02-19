@@ -89,10 +89,6 @@ public class Grapher extends JFrame {
             JButton zeroBtn = new JButton("Nullstill");
             JButton infoBtn = new JButton("Enhetsinfo...");
 
-
-
-
-
             startBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             startBtn.addActionListener(e -> {
                 String tauString = "Tau";
@@ -107,7 +103,6 @@ public class Grapher extends JFrame {
 
                     JTextField testIDField = new JTextField(5);
                     JTextField customerField = new JTextField(5);
-                    //JTextField specimenTypeField = new JTextField(5);
                     JRadioButton tauRadioButton = new JRadioButton(tauString);
                     tauRadioButton.setActionCommand(tauString);
                     tauRadioButton.setSelected(true);
@@ -127,23 +122,12 @@ public class Grapher extends JFrame {
 
                     if (kjettingRadioButton.isSelected()) {
                         specimenType = kjettingString;
-                    } else if (tauRadioButton.isSelected()){
+                    } else if (tauRadioButton.isSelected()) {
                         specimenType = tauString;
                     } else {
                         specimenType = annetString;
                     }
 
-                    try {
-                        testIDField.setText(String.valueOf(Integer.parseInt(Utils.findPreviousTestId()) + 1));
-                    } catch (IOException | NumberFormatException ex) {
-                        System.out.println("Could not find previous test ID!");
-                        try {
-                            testIDField.setText(Utils.findPreviousTestId());
-                        } catch (IOException exc) {
-                            exc.printStackTrace();
-                        }
-                        ex.printStackTrace();
-                    }
 
                     JPanel radioButtonPanel = new JPanel();
                     radioButtonPanel.setLayout(new FlowLayout());
@@ -152,11 +136,10 @@ public class Grapher extends JFrame {
                     radioButtonPanel.add(annetRadioButton);
                     //Perhaps all of this should be dynamically pulled from StrainTestObject? For now it isn't.
                     JPanel myPanel = new JPanel();
-                    myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.PAGE_AXIS));
+                    myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
 
                     myPanel.add(new JLabel("Test-ID: "));
                     myPanel.add(testIDField);
-
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
                     myPanel.add(new JLabel("Kunde: "));
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
@@ -186,6 +169,11 @@ public class Grapher extends JFrame {
                         testCommentField.setText(metadata[5][1]);
                         operatorField.setText(metadata[6][1]);
                     }
+                    try {
+                        testIDField.setText(String.valueOf(Utils.getNextTestId()));
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                     int result = JOptionPane.showConfirmDialog(null, myPanel,
                             "Sleng inn testdata!", JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
@@ -212,7 +200,7 @@ public class Grapher extends JFrame {
             });
 
 
-            rangeAxis.setAutoRangeMinimumSize(200);
+            rangeAxis.setRange(-100,500);
             stopBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             stopBtn.addActionListener(e -> {
                 if (s.isPaused()) {
@@ -227,10 +215,7 @@ public class Grapher extends JFrame {
             });
             saveBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             saveBtn.addActionListener(e -> {
-                File directory = new File(System.getProperty("user.home") + File.separator + "tests");
-                if (! directory.exists()) {
-                    directory.mkdir();
-                }
+
                 String filenameString = "new_test";
 
                 LocalDateTime myDateObj = LocalDateTime.now();
@@ -242,7 +227,20 @@ public class Grapher extends JFrame {
                 }
 
                 final JFileChooser fc = new JFileChooser();
-                fc.setCurrentDirectory(new File(System.getProperty("user.home") + File.separator + "tests"));
+                File file = new File(Utils.DATA_PATH);
+
+                if (file.getParentFile().mkdir()) {
+                    System.out.println(file.getParentFile() + " directory created successfully");
+                } else {
+                    System.out.println("Sorry, couldn’t create " + file.getParentFile().toString());
+                }
+                    if(file.mkdir()) {
+                    System.out.println(file.getParentFile() + " directory created successfully");
+                } else {
+                        System.out.println("Sorry, couldn’t create " + file.toString());
+                    }
+
+                fc.setCurrentDirectory(file);
                 fc.setDialogTitle("Specify a file to save");
                 fc.setSelectedFile(new File(filenameString + "__" + timestamp));
 

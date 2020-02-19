@@ -95,7 +95,9 @@ public class StrainTestObject {
     }
 
     void addDataToGraph(double val) {
-        invokeLater(() -> g.series.add(new Millisecond(), val));
+        invokeLater(() -> {
+            g.series.add(new Millisecond(), val);
+        });
         updateValueLabels(val);
     }
 
@@ -177,8 +179,10 @@ public class StrainTestObject {
 
     public void setMaxValue(double maxValue) {
         maxValueLabel.setText(String.valueOf(maxValue));
-        g.maxLabel.setText(String.valueOf(Utils.round(maxValue,2)));
-
+        g.maxLabel.setText(String.valueOf(Utils.round(maxValue, 2)));
+        if (g.plot.getRangeAxis().getRange().getUpperBound() <= maxValue) {
+            g.plot.getRangeAxis().setRange(-100, maxValue + 1000);
+        }
     }
 
     public double getCurrentValue() {

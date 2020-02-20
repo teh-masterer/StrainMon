@@ -399,6 +399,7 @@ public class Grapher extends JFrame {
             DefaultXYItemRenderer renderer = new DefaultXYItemRenderer();
             renderer.setSeriesPaint(0, Color.RED);
             renderer.setSeriesStroke(0, new BasicStroke(2.0f));
+            renderer.setDefaultShapesVisible(false);
 
             plot.setRenderer(renderer);
             plot.setBackgroundPaint(Color.lightGray);

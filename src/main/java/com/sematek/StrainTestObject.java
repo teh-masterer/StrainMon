@@ -6,7 +6,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 
 import javax.swing.*;
 
-import java.util.HashMap;
+import java.awt.*;
 
 import static java.awt.EventQueue.invokeLater;
 
@@ -23,24 +23,32 @@ public class StrainTestObject {
 
     private double currentValue;
     private double offsetValue;
+    private double currentExtValue;
+    private double offsetExtValue;
+
+    private double elongatedValue;
+    private double elongatedDistance;
+
 
     final JLabel maxValueLabel;
     final JLabel currentValueLabel;
     final JLabel offsetValueLabel;
+    final JLabel elongationValueLabel;
 
     private final TimeSeries series;
     public final TimeSeriesCollection dataset;
 
+    private boolean elongationTestRunning;
+    private double stopElongation;
 
-    double recentExtVal;
 
 
-    public void setExtUserOffset(double extUserOffset) {
-        this.extUserOffset = extUserOffset;
-        g.extDataLbl.setText(String.valueOf(Utils.round((recentExtVal-extUserOffset),1)));
+
+    public void setOffsetExtValue(double offsetExtValue) {
+        this.offsetExtValue = offsetExtValue;
+        g.extDataLbl.setText(String.valueOf(Utils.round((currentExtValue - offsetExtValue),1)));
     }
 
-    double extUserOffset;
 
     private Grapher g;
 
@@ -60,6 +68,15 @@ public class StrainTestObject {
         currentValueLabel = new JLabel("0.00");
         maxValueLabel = new JLabel("0.00");
         offsetValueLabel = new JLabel("0.00");
+        elongationValueLabel = new JLabel("0.00");
+
+
+        currentExtValue = 0;
+        offsetExtValue = 0;
+        elongatedValue = 0;
+        elongatedDistance = 0;
+
+        elongationTestRunning = false;
    }
 
     public StrainTestObject(String testID, String customer, String locale, String specimenType, String specimenName, String testComment, String operator, Grapher g) {
@@ -84,9 +101,14 @@ public class StrainTestObject {
         currentValueLabel = new JLabel("0.00");
         maxValueLabel = new JLabel("0.00");
         offsetValueLabel = new JLabel("0.00");
+        elongationValueLabel = new JLabel("0.00");
 
-        recentExtVal = 0;
-        extUserOffset = 0;
+        currentExtValue = 0;
+        offsetExtValue = 0;
+        elongatedValue = 0;
+        elongatedDistance = 0;
+
+        elongationTestRunning = false;
     }
 
     public StrainTestObject(Grapher g) {
@@ -100,22 +122,48 @@ public class StrainTestObject {
         });
         updateValueLabels(val);
     }
-
+    void startElongationTest(String measuredLength) {
+        stopElongation = Double.parseDouble(measuredLength)/100 + currentExtValue; //Finner 1% av målt lengde, plusser på nåværende lengde for å sette mål
+        zeroExtOffset();
+        elongationTestRunning = true;
+        g.elongatedValueLabel.setText("---");
+        g.elongatedDistanceLabel.setText(String.valueOf(stopElongation));
+        g.strainStartBtn.setBackground(Color.yellow);
+        System.out.println("Elongation test started at " + currentExtValue + " and load value " + currentValue + " kg.");
+    }
 
 
     private void updateValueLabels (double val) {
-        setCurrentValue(val);
+        setCurrentValue(Math.round(val));
         if (getMaxValue()< val) {
-            setMaxValue(val);
+            setMaxValue(Math.round(val));
         }
     }
 
-    void updateExtensiometerData(String s) {
-        recentExtVal = Double.parseDouble(s);
-        g.extDataLbl.setText(String.valueOf(Utils.round((recentExtVal-extUserOffset),2)));
-        System.out.println("Extension: " + s + " " + recentExtVal + ", displayed: " + (recentExtVal-extUserOffset));
+    void addExtData(String s) {
+        currentExtValue = Double.parseDouble(s);
+        g.extDataLbl.setText(String.valueOf(Utils.round((currentExtValue- offsetExtValue),2)));
+        System.out.println("Extension: " + s + " " + currentExtValue + ", displayed: " + (currentExtValue - offsetExtValue));
+
+        if (elongationTestRunning) {
+            if (currentExtValue >= stopElongation) {
+                elongationTestRunning = false;
+                System.out.println("Elongation test stopped at " + currentExtValue + " and load value " + currentValue + " kg.");
+                setElongatedValue(currentValue);
+                setElongatedDistance(currentExtValue - offsetExtValue);
+                g.strainStartBtn.setBackground(null);
+
+            } else {
+                System.out.println(currentExtValue + " / " + stopElongation);
+            }
+        }
     }
 
+    void zeroExtOffset() {
+        offsetExtValue = currentExtValue;
+        elongationTestRunning = false;
+        g.strainStartBtn.setBackground(null);
+    }
 
     public void removeAllSeries() {
         dataset.removeAllSeries();
@@ -195,6 +243,15 @@ public class StrainTestObject {
         g.valueLabel.setText(String.valueOf(Utils.round(currentValue,2)));
 
     }
+    public void setElongatedValue (double elongatedValue) {
+        this.elongatedValue = elongatedValue;
+        g.elongatedValueLabel.setText(String.valueOf(Utils.round(elongatedValue,2)));
+    }
+    public void setElongatedDistance (double elongatedDistance) {
+        this.elongatedDistance = elongatedDistance;
+        g.elongatedDistanceLabel.setText(String.valueOf(Utils.round(elongatedDistance,2)));
+
+    }
 
     public double getOffsetValue() {
         return offsetValue;
@@ -206,4 +263,11 @@ public class StrainTestObject {
         g.offsetLabel.setText(String.valueOf(Utils.round(offsetValue,2)));
     }
 
+    public double getElongatedValue() {
+        return elongatedValue;
+    }
+
+    public double getElongatedDistance() {
+        return elongatedDistance;
+    }
 }

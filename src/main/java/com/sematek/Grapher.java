@@ -31,6 +31,12 @@ public class Grapher extends JFrame {
     public JLabel maxLabel;
     public JLabel offsetLabel;
     public JLabel extDataLbl;
+    public JLabel elongatedDistanceLabel;
+    public JLabel elongatedValueLabel;
+
+    public JPanel p;
+
+    JButton strainStartBtn; //needs access from STO
 
     private StrainTestObject strainTestObject;
 
@@ -53,11 +59,8 @@ public class Grapher extends JFrame {
             dataset = new TimeSeriesCollection();
             dataset.addSeries(series);
             chart.getXYPlot().setDataset(dataset);
+            plot.getRangeAxis().setRange(-100,500);
 
-            //dataset = strainTestObject.getDataset();
-            //series = (TimeSeries) dataset.getSeries();
-            //chart.getXYPlot().setDataset(dataset);
-            //dataset = strainTestObject.getDataset(); //load the dataset containing series to the graph
             try {
                 dataset.validateObject();
             } catch (InvalidObjectException e) {
@@ -83,8 +86,8 @@ public class Grapher extends JFrame {
             NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
             rangeAxis.setStandardTickUnits(NumberAxis.createStandardTickUnits());
 
-            BlinkButton startBtn = new BlinkButton("Start...");
-            BlinkButton stopBtn = new BlinkButton("Stopp");
+            JButton startBtn = new JButton("Start...");
+            JButton stopBtn = new JButton("Pause");
             JButton saveBtn=new JButton("Lagre...");
             JButton zeroBtn = new JButton("Nullstill");
             JButton infoBtn = new JButton("Enhetsinfo...");
@@ -97,7 +100,8 @@ public class Grapher extends JFrame {
                 String specimenType = tauString;
 
                 if (s != null && s.isPaused()) {
-                    stopBtn.setBlinking(false);
+                    stopBtn.setBackground(null);
+                    startBtn.setBackground(Color.yellow);
                     s.setPaused(false);
                 } else {
 
@@ -163,8 +167,15 @@ public class Grapher extends JFrame {
                     String[][] metadata = Utils.loadMetadata(this);
                     if (metadata[6][0].length() > 0) {
                         testIDField.setText(metadata[0][1]);
-                        customerField.setText(metadata[2][1]);
-                        localeField.setText(metadata[3][1]);
+                        customerField.setText(metadata[1][1]);
+                        localeField.setText(metadata[2][1]);
+                        if (metadata[3][1].equals("Tau")) {
+                            tauRadioButton.setSelected(true);
+                        } else if (metadata[3][1].equals("Kjetting")) {
+                            kjettingRadioButton.setSelected(true);
+                        } else {
+                            annetRadioButton.setSelected(true);
+                        }
                         specimenNameField.setText(metadata[4][1]);
                         testCommentField.setText(metadata[5][1]);
                         operatorField.setText(metadata[6][1]);
@@ -178,23 +189,19 @@ public class Grapher extends JFrame {
                             "Sleng inn testdata!", JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
                         strainTestObject = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
-                        JOptionPane.showMessageDialog(null, strainTestObject.validateInput());
                         if (strainTestObject.validateInput().equals("OK")) {
                             startSerialReader();
-                            startBtn.setBlinking(true);
+                            startBtn.setBackground(Color.yellow);
                             Utils.saveMetadata(strainTestObject);
                         } else {
+                            JOptionPane.showMessageDialog(null, strainTestObject.validateInput());
                             startBtn.doClick();
                         }
-                    /*System.out.println("ID: " + testIDField.getText() + "\tKunde: " + customerField.getText() + "\tLokalitet: " + localeField.getText() + "\tType: " +
-                            specimenTypeField.getText() + "\tNavn: " + specimenNameField.getText() + "\tKommentar: " + testCommentField.getText() +
-                            "\tOperatør: " + operatorField.getText());
-                    //Copy text from fields to String variables in global scope */
 
                     } else {
                         strainTestObject = new StrainTestObject(this);
                         startSerialReader();
-                        startBtn.setBlinking(true);
+                        startBtn.setBackground(Color.yellow);
                     }
                 }
             });
@@ -204,12 +211,12 @@ public class Grapher extends JFrame {
             stopBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             stopBtn.addActionListener(e -> {
                 if (s.isPaused()) {
-                    stopBtn.setBlinking(false);
-                    s.setPaused(false);
-                    s.end();
+                   // stopBtn.setBackground(null);
+                   // s.setPaused(false);
+                   // s.end();
                 } else {
-                    stopBtn.setBlinking(true);
-                    startBtn.setBlinking(false);
+                    stopBtn.setBackground(Color.yellow);
+                    startBtn.setBackground(null);
                     s.pause();
                 }
             });
@@ -223,7 +230,7 @@ public class Grapher extends JFrame {
                 String timestamp = myDateObj.format(myFormatObj);
 
                 if (strainTestObject.validateInput().equals("OK")) {
-                    filenameString = (strainTestObject.getTestID() +1);
+                    filenameString = (strainTestObject.getTestID());
                 }
 
                 final JFileChooser fc = new JFileChooser();
@@ -279,7 +286,8 @@ public class Grapher extends JFrame {
                 if (s.getRunning()) {
                 JOptionPane.showMessageDialog(null," \t\t---- DEVICE ID CONFIG ----\n"+
                         "ID: " + s.deviceId + "\t BAUDRATE: " + s.baudRate + "\t REFRESH RATE: " + s.digitalFilter +
-                        "\nFW: " + s.instrumentVersion + "\t RESOLUTION: " + s.resolution + "\t SCALE: " + s.fullScale);
+                        "\nFW: " + s.instrumentVersion + "\t RESOLUTION: " + s.resolution + "\t SCALE: " + s.fullScale +
+                        "\nKODET AV VEGARD GUTTORMSEN FOR SEMATEK (2020)");
                 } else {
                     JOptionPane.showMessageDialog(null,"Start prosessen for å vise enhetsinformasjon!");
                 }
@@ -288,21 +296,43 @@ public class Grapher extends JFrame {
             JButton zeroExtBtn = new JButton("Null ekst.");
             zeroExtBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             zeroExtBtn.addActionListener(e -> {
-                strainTestObject.setExtUserOffset(Double.parseDouble(extDataLbl.getText()));
+                strainTestObject.zeroExtOffset();
             });
 
+            strainStartBtn = new JButton("Start 1%-måling");
+            strainStartBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
+            strainStartBtn.addActionListener(e -> {
+                JTextField measLengthField = new JTextField(5);
+
+                JPanel myPanel = new JPanel();
+                myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
+
+                myPanel.add(new JLabel("Målt lengde: "));
+                myPanel.add(measLengthField);
+
+                int result = JOptionPane.showConfirmDialog(null, myPanel,
+                        "Sleng inn testdata!", JOptionPane.OK_CANCEL_OPTION);
+                if (result == JOptionPane.OK_OPTION) {
+                    if (Utils.isInteger(measLengthField.getText())) {
+                        JOptionPane.showMessageDialog(null, "Du skrev inn et tall. Veldig bra! Applaus.");
+                        strainTestObject.startElongationTest(measLengthField.getText());
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Du skrev ikke et tall. Svakt.");
+                    }
+                    }
+            });
 
             JLabel valueTxtLbl1 =new JLabel("Verdi ");
-            valueLabel = new JLabel("0.00");
-            valueLabel.setPreferredSize(new Dimension(150,40));
+            valueLabel = new JLabel("0");
+            valueLabel.setPreferredSize(new Dimension(200,50));
             valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
             valueLabel.setOpaque(true);
             valueLabel.setForeground(Color.blue);
             valueLabel.setBackground(Color.lightGray);
             JLabel valueTxtLbl2 =new JLabel("kg   ");
             JLabel maxTxtLbl1 =new JLabel("Maks ");
-            maxLabel =new JLabel("0.00");
-            maxLabel.setPreferredSize(new Dimension(150,40));
+            maxLabel =new JLabel("0");
+            maxLabel.setPreferredSize(new Dimension(200,50));
             maxLabel.setHorizontalAlignment(SwingConstants.CENTER);
             maxLabel.setOpaque(true);
             maxLabel.setForeground(Color.blue);
@@ -310,55 +340,86 @@ public class Grapher extends JFrame {
 
             JLabel maxTxtLbl2 =new JLabel("kg   ");
             JLabel offsetTxtLbl1 = new JLabel("Offset ");
-            offsetLabel = new JLabel(("0.00"));
-            offsetLabel.setPreferredSize(new Dimension(150,40));
+            offsetLabel = new JLabel(("0"));
+            offsetLabel.setPreferredSize(new Dimension(200,50));
             offsetLabel.setHorizontalAlignment(SwingConstants.CENTER);
             JLabel offsetTxtLbl2 = new JLabel("kg   ");
 
-            float fontSz = 26.0f;
-            valueLabel.setFont (valueLabel.getFont ().deriveFont (fontSz));
-            maxLabel.setFont (maxLabel.getFont ().deriveFont (fontSz));
-            offsetLabel.setFont (offsetLabel.getFont ().deriveFont (fontSz));
+            float fontSzRegular = 36.0f;
+            float fontSzSmall = 28.0f;
+
+            valueLabel.setFont (valueLabel.getFont ().deriveFont (fontSzRegular));
+            maxLabel.setFont (maxLabel.getFont ().deriveFont (fontSzRegular));
+            offsetLabel.setFont (offsetLabel.getFont ().deriveFont (fontSzRegular));
             offsetLabel.setOpaque(true);
             offsetLabel.setForeground(Color.blue);
             offsetLabel.setBackground(Color.lightGray);
-            valueTxtLbl1.setFont (valueTxtLbl1.getFont ().deriveFont (fontSz));
-            valueTxtLbl2.setFont (valueTxtLbl2.getFont ().deriveFont (fontSz));
-            maxTxtLbl1.setFont (maxTxtLbl1.getFont ().deriveFont (fontSz));
-            maxTxtLbl2.setFont (maxTxtLbl2.getFont ().deriveFont (fontSz));
-            offsetTxtLbl1.setFont (offsetTxtLbl1.getFont ().deriveFont (fontSz));
-            offsetTxtLbl2.setFont (offsetTxtLbl1.getFont ().deriveFont (fontSz));
+            valueTxtLbl1.setFont (valueTxtLbl1.getFont ().deriveFont (fontSzRegular));
+            valueTxtLbl2.setFont (valueTxtLbl2.getFont ().deriveFont (fontSzRegular));
+            maxTxtLbl1.setFont (maxTxtLbl1.getFont ().deriveFont (fontSzRegular));
+            maxTxtLbl2.setFont (maxTxtLbl2.getFont ().deriveFont (fontSzRegular));
+            offsetTxtLbl1.setFont (offsetTxtLbl1.getFont ().deriveFont (fontSzRegular));
+            offsetTxtLbl2.setFont (offsetTxtLbl1.getFont ().deriveFont (fontSzRegular));
+
+            JLabel extTextLbl = new JLabel("Ekst. ");
+            extTextLbl.setFont(extTextLbl.getFont().deriveFont(fontSzSmall));
 
             extDataLbl = new JLabel("0.0");
-            JLabel extUnitLbl = new JLabel("mm");
-            JLabel extTextLbl = new JLabel("Ekst. ");
-            extDataLbl.setPreferredSize(new Dimension(150,40));
+            extDataLbl.setPreferredSize(new Dimension(150,30));
             extDataLbl.setHorizontalAlignment(SwingConstants.CENTER);
             extDataLbl.setOpaque(true);
             extDataLbl.setForeground(Color.blue);
             extDataLbl.setBackground(Color.lightGray);
-            extDataLbl.setFont(extDataLbl.getFont().deriveFont(fontSz));
-
-            extUnitLbl.setFont(extUnitLbl.getFont().deriveFont(fontSz));
-            extTextLbl.setFont(extTextLbl.getFont().deriveFont(fontSz));
+            extDataLbl.setFont(extDataLbl.getFont().deriveFont(fontSzSmall));
 
 
+            elongatedValueLabel = new JLabel("---");
+            elongatedValueLabel.setPreferredSize(new Dimension(150,30));
+            elongatedValueLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            elongatedValueLabel.setOpaque(true);
+            elongatedValueLabel.setForeground(Color.blue);
+            elongatedValueLabel.setBackground(Color.lightGray);
+            //elongatedValueLabel.setVisible(false);
+            elongatedValueLabel.setFont(elongatedValueLabel.getFont().deriveFont(fontSzSmall));
 
-            JPanel labelPanel = new JPanel();
-            labelPanel.add(valueTxtLbl1,BorderLayout.WEST);
-            labelPanel.add(valueLabel,BorderLayout.WEST);
-            labelPanel.add(valueTxtLbl2,BorderLayout.WEST);
-            labelPanel.add(maxTxtLbl1,BorderLayout.WEST);
-            labelPanel.add(maxLabel,BorderLayout.WEST);
-            labelPanel.add(maxTxtLbl2,BorderLayout.WEST);
 
-            labelPanel.add(offsetTxtLbl1,BorderLayout.EAST);
-            labelPanel.add(offsetLabel,BorderLayout.EAST);
-            labelPanel.add(offsetTxtLbl2,BorderLayout.EAST);
+            JLabel elongatedDistanceTextLabel = new JLabel("Mål ");
+            elongatedDistanceTextLabel.setFont(extTextLbl.getFont().deriveFont(fontSzSmall));
 
-            labelPanel.add(extTextLbl,BorderLayout.EAST);
-            labelPanel.add(extDataLbl,BorderLayout.EAST);
-            labelPanel.add(extUnitLbl,BorderLayout.EAST);
+            JLabel elongatedValueTextLabel = new JLabel("Last ved 1% ");
+            elongatedValueTextLabel.setFont(elongatedValueTextLabel.getFont().deriveFont(fontSzSmall));
+
+            elongatedDistanceLabel = new JLabel("---");
+            elongatedDistanceLabel.setPreferredSize(new Dimension(150,30));
+            elongatedDistanceLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            elongatedDistanceLabel.setOpaque(true);
+            elongatedDistanceLabel.setForeground(Color.blue);
+            elongatedDistanceLabel.setBackground(Color.lightGray);
+            //elongatedDistanceLabel.setVisible(false);
+            elongatedDistanceLabel.setFont(elongatedDistanceLabel.getFont().deriveFont(fontSzSmall));
+
+
+            JPanel labelPanelUpper = new JPanel();
+            labelPanelUpper.add(valueTxtLbl1,BorderLayout.WEST);
+            labelPanelUpper.add(valueLabel,BorderLayout.WEST);
+            labelPanelUpper.add(valueTxtLbl2,BorderLayout.WEST);
+            labelPanelUpper.add(maxTxtLbl1,BorderLayout.WEST);
+            labelPanelUpper.add(maxLabel,BorderLayout.WEST);
+            labelPanelUpper.add(maxTxtLbl2,BorderLayout.WEST);
+
+            labelPanelUpper.add(offsetTxtLbl1,BorderLayout.EAST);
+            labelPanelUpper.add(offsetLabel,BorderLayout.EAST);
+            labelPanelUpper.add(offsetTxtLbl2,BorderLayout.EAST);
+
+
+
+            JPanel labelPanelLower = new JPanel();
+            labelPanelLower.add(extTextLbl,BorderLayout.EAST);
+            labelPanelLower.add(extDataLbl,BorderLayout.EAST);
+            labelPanelLower.add(elongatedDistanceTextLabel);
+            labelPanelLower.add(elongatedDistanceLabel);
+            labelPanelLower.add(elongatedValueTextLabel);
+            labelPanelLower.add(elongatedValueLabel);
 
 
             JPanel buttonPanel = new JPanel(); //Make the button panel
@@ -371,9 +432,18 @@ public class Grapher extends JFrame {
             buttonPanel.add(infoBtn);
 
             buttonPanel.add(zeroExtBtn);
+            buttonPanel.add(strainStartBtn);
 
-            add(labelPanel,BorderLayout.CENTER);
-            add(buttonPanel,BorderLayout.SOUTH);
+            p = new JPanel();
+            p.setLayout(new BorderLayout());
+            p.add(labelPanelUpper,BorderLayout.NORTH);
+            p.add(labelPanelLower,BorderLayout.CENTER);
+            p.add(buttonPanel,BorderLayout.SOUTH);
+
+            add(p,BorderLayout.SOUTH);
+            //add(labelPanelUpper,BorderLayout.CENTER);
+            //add(labelPanelLower,BorderLayout.SOUTH);
+            //add(buttonPanel,BorderLayout.SOUTH);
             pack();
             setTitle("Sematek Horisontal Strekkbenk");
             setLocationRelativeTo(null);

@@ -122,7 +122,7 @@ public class SerialReader implements Runnable {
                             while (messages.contains("\n")) {
                                 String[] message = messages.split("\\n", 2);
                                 messages = (message.length > 1) ? message[1] : "";
-                                sto.updateExtensiometerData(message[0]);
+                                sto.addExtData(message[0]);
                             }
                         }
                     });
@@ -290,7 +290,7 @@ public class SerialReader implements Runnable {
         Matcher m = r.matcher(in);
         if (m.find()) {
             double correctedValue = Double.parseDouble(m.group(0)) / CORRECTION_FACTOR + CORRECTION_OFFSET; //All values are corrected by a a*x+c factor found by experimentation
-            System.out.println("Found value " + m.group(0) + " / " + correctedValue + " at time " + ((System.currentTimeMillis() - lastReadTime) / 1000) + "s");
+            System.out.println("Val:" + Utils.round(correctedValue,2) + " kg, at " + ((System.currentTimeMillis() - lastReadTime) / 1000) + "s");
             if (activateZeroBalance) {
                 double rollingSum = 0;
                 for (int i = recentValues.length - 2; i >= 0; i--) {

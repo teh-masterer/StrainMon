@@ -47,8 +47,8 @@ public class SerialReader implements Runnable {
         this.STOP_BITS = Config.getInstance().STOP_BITS;
         this.PARITY_BITS = Config.getInstance().PARITY_BITS;
         this.SMOOTHING_BUFFER_LENGTH = Config.getInstance().SMOOTHING_BUFFER_LENGTH;
-        this.AUTO_ZERO_ON_START = Config.getInstance().AUTO_ZERO_ON_START;
-        //this.activateZeroBalance = false;
+        //this.AUTO_ZERO_ON_START = Config.getInstance().AUTO_ZERO_ON_START;
+        this.AUTO_ZERO_ON_START = false;
 
         System.out.println("Loaded config file with timestamp " + Config.getInstance().TIMESTAMP);
 

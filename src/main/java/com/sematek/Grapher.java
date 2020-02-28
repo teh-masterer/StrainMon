@@ -64,7 +64,7 @@ public class Grapher extends JFrame {
             dataset = new TimeSeriesCollection();
             dataset.addSeries(series);
             chart.getXYPlot().setDataset(dataset);
-            plot.getRangeAxis().setRange(-100,500);
+            plot.getRangeAxis().setRange(-200,1000);
 
             try {
                 dataset.validateObject();
@@ -130,15 +130,6 @@ public class Grapher extends JFrame {
                     specimenTypeGroup.add(annetRadioButton);
 
 
-                    if (kjettingRadioButton.isSelected()) {
-                        specimenType = kjettingString;
-                    } else if (tauRadioButton.isSelected()) {
-                        specimenType = tauString;
-                    } else {
-                        specimenType = annetString;
-                    }
-
-
                     JPanel radioButtonPanel = new JPanel();
                     radioButtonPanel.setLayout(new FlowLayout());
                     radioButtonPanel.add(tauRadioButton);
@@ -190,9 +181,17 @@ public class Grapher extends JFrame {
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
+
                     int result = JOptionPane.showConfirmDialog(null, myPanel,
                             "Sleng inn testdata!", JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
+                        if (kjettingRadioButton.isSelected()) {
+                            specimenType = kjettingString;
+                        } else if (tauRadioButton.isSelected()) {
+                            specimenType = tauString;
+                        } else {
+                            specimenType = annetString;
+                        }
                         sto = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
                         if (sto.validateInput().equals("OK")) {
                             startSerialReader();
@@ -231,7 +230,38 @@ public class Grapher extends JFrame {
             });
             saveBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             saveBtn.addActionListener(e -> {
+                if (sto.getSpecimenType().equals("Kjetting")){
+                    JPanel myPanel = new JPanel();
+                    JTextField preB = new JTextField("0"), preD = new JTextField("0"), preL = new JTextField("0"), postB = new JTextField("0");
 
+                    myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
+                    myPanel.add(new JLabel("Skriv inn opprinnelig B-mål"));
+                    myPanel.add(preB);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Skriv inn opprinnelig D-mål"));
+                    myPanel.add(preD);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Skriv inn opprinnelig L-mål"));
+                    myPanel.add(preL);
+                    myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                    myPanel.add(new JLabel("Skriv inn strukket D-mål"));
+                    myPanel.add(postB);
+
+                    int result = JOptionPane.showConfirmDialog(this,myPanel,"Kjetting-parametre",JOptionPane.OK_CANCEL_OPTION);
+                    if (result == JOptionPane.OK_OPTION) {
+                        sto.setPreB(preB.getText());
+                        sto.setPreD(preD.getText());
+                        sto.setPreL(preL.getText());
+                        sto.setPostB(postB.getText());
+                    } else {
+                        sto.setPreB("ukjent");
+                        sto.setPreD("ukjent");
+                        sto.setPreL("ukjent");
+                        sto.setPostB("ukjent");
+                    }
+
+                }
+                Utils.saveMetadata(sto);
                 String filenameString = "new_test";
 
                 LocalDateTime myDateObj = LocalDateTime.now();
@@ -280,20 +310,16 @@ public class Grapher extends JFrame {
             zeroBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             zeroBtn.addActionListener(e -> {
                 if (s.getRunning()) {
-                    series.delete(0, series.getItemCount() - 1);
                     maxLabel.setText("0.00");
-                    if (sto.isUseCalculatedOffset()) {
-                        sto.setOffsetValue();
-                    } else {
-                        sto.setUseCalculatedOffset(true);
-                        s.setActivateZeroBalance(true);
-
-                    }
+                    s.setActivateZeroBalance(true);
                 } else {
                     JOptionPane.showMessageDialog(null,"Start prosessen for å kunne nullstille!");
                 }
             });
-
+            JButton deleteSeriesBtn = new JButton("Fjern data");
+            deleteSeriesBtn.addActionListener(e -> {
+                series.delete(0, series.getItemCount() - 1);
+            });
 
 
             infoBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -392,7 +418,6 @@ public class Grapher extends JFrame {
             elongatedValueLabel.setOpaque(true);
             elongatedValueLabel.setForeground(Color.blue);
             elongatedValueLabel.setBackground(Color.lightGray);
-            //elongatedValueLabel.setVisible(false);
             elongatedValueLabel.setFont(elongatedValueLabel.getFont().deriveFont(fontSzSmall));
 
 
@@ -408,7 +433,6 @@ public class Grapher extends JFrame {
             elongatedDistanceLabel.setOpaque(true);
             elongatedDistanceLabel.setForeground(Color.blue);
             elongatedDistanceLabel.setBackground(Color.lightGray);
-            //elongatedDistanceLabel.setVisible(false);
             elongatedDistanceLabel.setFont(elongatedDistanceLabel.getFont().deriveFont(fontSzSmall));
 
 
@@ -424,8 +448,6 @@ public class Grapher extends JFrame {
             labelPanelUpper.add(offsetLabel,BorderLayout.EAST);
             labelPanelUpper.add(offsetTxtLbl2,BorderLayout.EAST);
 
-
-
             JPanel labelPanelLower = new JPanel();
             labelPanelLower.add(extTextLbl,BorderLayout.EAST);
             labelPanelLower.add(extDataLbl,BorderLayout.EAST);
@@ -439,11 +461,9 @@ public class Grapher extends JFrame {
             buttonPanel.add(startBtn);
             buttonPanel.add(stopBtn);
             buttonPanel.add(zeroBtn);
-
-
+            buttonPanel.add(deleteSeriesBtn);
             buttonPanel.add(saveBtn);
             buttonPanel.add(infoBtn);
-
             buttonPanel.add(zeroExtBtn);
             buttonPanel.add(strainStartBtn);
 

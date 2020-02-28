@@ -28,22 +28,7 @@ public class Utils {
     static final String METADATA_FILENAME = "cached_data.csv";
     static final String CONFIG_FILENAME = "config.json";
 
-
-    public static void storeDataSet(JFreeChart chart, String filename, StrainTestObject sto) {
-        java.util.List<String> csv = new ArrayList<>();
-        csv.add(String.format("%s, %s", "testId", sto.getTestID()));
-        csv.add(String.format("%s, %s", "customer", sto.getCustomer()));
-        csv.add(String.format("%s, %s", "locale", sto.getLocale()));
-        csv.add(String.format("%s, %s", "specimenType", sto.getSpecimenType()));
-        csv.add(String.format("%s, %s", "specimenName", sto.getSpecimenName()));
-        csv.add(String.format("%s, %s", "testComment", sto.getTestComment()));
-        csv.add(String.format("%s, %s", "operator", sto.getOperator()));
-        csv.add(String.format("%s, %s", "maxValue", sto.getMaxValue()));
-
-        storeDataSet(chart, filename, csv);
-    }
-
-    public static void saveMetadata(StrainTestObject sto) {
+    public static List<String> makeMetadataCSV(StrainTestObject sto) {
         java.util.List<String> csv = new ArrayList<>();
         csv.add(String.format("%s, %s", "testId", sto.getTestID()));
         csv.add(String.format("%s, %s", "customer", sto.getCustomer()));
@@ -54,8 +39,17 @@ public class Utils {
         csv.add(String.format("%s, %s", "operator", sto.getOperator()));
         csv.add(String.format("%s, %s", "maxValue", sto.getMaxValue()));
         csv.add(String.format("%s, %s", "offset", sto.getOffsetValue()));
+        csv.add(String.format("%s, %s", "preB", sto.getPreB()));
+        csv.add(String.format("%s, %s", "preD", sto.getPreD()));
+        csv.add(String.format("%s, %s", "preL", sto.getPreL()));
+        csv.add(String.format("%s, %s", "postB", sto.getPostB()));
+        csv.add(String.format("%s, %s", "elongatedValue", sto.getElongatedValue()));
+        csv.add(String.format("%s, %s", "elongatedDistance", sto.getElongatedDistance()));
+        return csv;
+    }
 
-
+    public static void saveMetadata(StrainTestObject sto) {
+        java.util.List<String> csv = makeMetadataCSV(sto);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(CONFIG_PATH + METADATA_FILENAME))) {
             for (String line : csv) {
                 writer.append(line);
@@ -71,7 +65,7 @@ public class Utils {
         String csvFile = CONFIG_PATH + METADATA_FILENAME;
         String line;
         String cvsSplitBy = ", ";
-        String[][] metadata = new String[10][2];
+        String[][] metadata = new String[20][2];
         for (String[] s : metadata) {
             Arrays.fill(s, "");
         }
@@ -81,8 +75,7 @@ public class Utils {
 
             while ((line = br.readLine()) != null) {
 
-                // use comma as separator
-                String[] newLine = line.split(cvsSplitBy);
+                String[] newLine = line.split(cvsSplitBy);                // use comma as separator
                 for (String s : newLine) {
                     s = s.trim();
                     System.out.println(s);
@@ -96,6 +89,9 @@ public class Utils {
         return metadata;
     }
 
+    public static void storeDataSet(JFreeChart chart, String filename, StrainTestObject sto) {
+        storeDataSet(chart, filename, makeMetadataCSV(sto));
+    }
 
     private static void storeDataSet(JFreeChart chart, String filename, List<String> csv) {
         if (chart.getPlot() instanceof XYPlot) {
@@ -169,6 +165,12 @@ public class Utils {
             if (sto.getElongatedDistance() != 0 & sto.getElongatedValue() != 0) {
                 newRow.createCell(9).setCellValue(sto.getElongatedDistance());
                 newRow.createCell(10).setCellValue(sto.getElongatedValue());
+            }
+            if (sto.getSpecimenType().equals("Kjetting")) {
+                newRow.createCell(11).setCellValue(sto.getPreB());
+                newRow.createCell(12).setCellValue(sto.getPreD());
+                newRow.createCell(13).setCellValue(sto.getPreL());
+                newRow.createCell(14).setCellValue(sto.getPostB());
             }
             try {
                 if (file != null) {

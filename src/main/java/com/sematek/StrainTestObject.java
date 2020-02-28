@@ -22,15 +22,13 @@ public class StrainTestObject {
     private double currentValue;
     private double currentExtValue;
     private double offsetExtValue;
-    private double offsetValue; // The displayed val
-    private double offsetStandardValue; //The fallback offset val
-    private boolean useCalculatedOffset;
+    private double offsetValue;
     private double elongatedValue;
     private double elongatedDistance;
     public final TimeSeriesCollection dataset;
     private boolean elongationTestRunning;
     private double stopElongation;
-
+    private String preB, preL, preD, postB;
 
 
 
@@ -152,7 +150,6 @@ public class StrainTestObject {
 
     }
 
-
     public String getTestID() {
         return testID;
     }
@@ -220,10 +217,6 @@ public class StrainTestObject {
         g.offsetLabel.setText(String.valueOf(Utils.round(offsetValue,2)));
     }
 
-    public void setOffsetValue() {
-        setOffsetValue(offsetStandardValue);
-    }
-
     public double getElongatedValue() {
         return elongatedValue;
     }
@@ -231,11 +224,37 @@ public class StrainTestObject {
     public double getElongatedDistance() {
         return elongatedDistance;
     }
-    public boolean isUseCalculatedOffset() {
-        return useCalculatedOffset;
+
+
+    public String getPreB() {
+        return preB;
     }
 
-    public void setUseCalculatedOffset(boolean useCalculatedOffset) {
-        this.useCalculatedOffset = useCalculatedOffset;
+    public void setPreB(String preB) {
+        this.preB = preB;
+    }
+
+    public String getPreL() {
+        return preL;
+    }
+
+    public void setPreL(String preL) {
+        this.preL = preL;
+    }
+
+    public String getPreD() {
+        return preD;
+    }
+
+    public void setPreD(String preD) {
+        this.preD = preD;
+    }
+
+    public String getPostB() {
+        return postB;
+    }
+
+    public void setPostB(String postB) {
+        this.postB = postB;
     }
 }

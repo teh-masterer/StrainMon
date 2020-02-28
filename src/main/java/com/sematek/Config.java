@@ -25,7 +25,6 @@ public class Config {
     final double USER_OFFSET;
     final int SMOOTHING_BUFFER_LENGTH;
     String TIMESTAMP;
-    String testId, operator, specimenType, specimenName, locale, customer, specimenDetails;
 
     public Config() {
         // Standardverdier i tilfelle config-filen ikke inneholder verdiene
@@ -36,9 +35,9 @@ public class Config {
         DATA_BITS = 8;
         STOP_BITS = 1;
         PARITY_BITS = 0;
-        USER_OFFSET = 0;
+        USER_OFFSET = 280;
         SMOOTHING_BUFFER_LENGTH = 15;
-        AUTO_ZERO_ON_START = true;
+        AUTO_ZERO_ON_START = false;
         TIMESTAMP = "default";
 
     }
@@ -94,10 +93,7 @@ public class Config {
         } catch (IOException e) {
             e.printStackTrace();
                 //Creating the directory
-            boolean bool = false;
-            bool = file.getParentFile().getParentFile().mkdir();
-            bool = file.getParentFile().mkdir();
-                if(bool){
+                if(file.getParentFile().getParentFile().mkdir() || file.getParentFile().mkdir()){
                     System.out.println("Config directory created successfully");
                 }else{
                     System.out.println("Sorry, couldn’t create config directory");

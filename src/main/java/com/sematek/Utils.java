@@ -1,11 +1,7 @@
 package com.sematek;
 
-import org.apache.poi.hssf.usermodel.HSSFCell;
-import org.apache.poi.hssf.usermodel.HSSFDataFormat;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -57,6 +53,8 @@ public class Utils {
         csv.add(String.format("%s, %s", "testComment", sto.getTestComment()));
         csv.add(String.format("%s, %s", "operator", sto.getOperator()));
         csv.add(String.format("%s, %s", "maxValue", sto.getMaxValue()));
+        csv.add(String.format("%s, %s", "offset", sto.getOffsetValue()));
+
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(CONFIG_PATH + METADATA_FILENAME))) {
             for (String line : csv) {
@@ -71,7 +69,7 @@ public class Utils {
 
     public static String[][] loadMetadata(Grapher g) {
         String csvFile = CONFIG_PATH + METADATA_FILENAME;
-        String line = "";
+        String line;
         String cvsSplitBy = ", ";
         String[][] metadata = new String[10][2];
         for (String[] s : metadata) {

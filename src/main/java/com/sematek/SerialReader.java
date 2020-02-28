@@ -24,12 +24,11 @@ public class SerialReader implements Runnable {
     final int DATA_BITS;
     final int STOP_BITS;
     final int PARITY_BITS;
-    boolean AUTO_ZERO_ON_START;
+    final boolean AUTO_ZERO_ON_START;
     final long lastReadTime;
     boolean activateZeroBalance;
     boolean paused;
     final double[] recentValues;
-    double userOffset;
 
     String deviceId, digitalFilter, instrumentVersion, resolution; //all of these are read
     int fullScale, inputSensibility, baudRate;
@@ -47,9 +46,10 @@ public class SerialReader implements Runnable {
         this.DATA_BITS = Config.getInstance().DATA_BITS;
         this.STOP_BITS = Config.getInstance().STOP_BITS;
         this.PARITY_BITS = Config.getInstance().PARITY_BITS;
-        this.userOffset = Config.getInstance().USER_OFFSET;
         this.SMOOTHING_BUFFER_LENGTH = Config.getInstance().SMOOTHING_BUFFER_LENGTH;
-        this.activateZeroBalance = Config.getInstance().AUTO_ZERO_ON_START;
+        this.AUTO_ZERO_ON_START = Config.getInstance().AUTO_ZERO_ON_START;
+        //this.activateZeroBalance = false;
+
         System.out.println("Loaded config file with timestamp " + Config.getInstance().TIMESTAMP);
 
         this.sto = sto;
@@ -187,6 +187,7 @@ public class SerialReader implements Runnable {
                 }
             }
         }
+            activateZeroBalance = AUTO_ZERO_ON_START;
     }
 
     void getDeviceConfig() throws InterruptedException {
@@ -300,12 +301,12 @@ public class SerialReader implements Runnable {
                 rollingSum += recentValues[0] = correctedValue;
 
                 if (recentValues[recentValues.length - 1] != 0) {
-                    userOffset = rollingSum / recentValues.length;
+                    double userOffset = rollingSum / recentValues.length;
                     activateZeroBalance = false;
                     sto.setOffsetValue(userOffset);
                 }
             } else {
-                sto.addDataToGraph(correctedValue - userOffset);
+                sto.addDataToGraph(correctedValue - sto.getOffsetValue());
             }
         }
     }

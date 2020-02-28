@@ -4,8 +4,6 @@ import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 
-import javax.swing.*;
-
 import java.awt.*;
 
 import static java.awt.EventQueue.invokeLater;
@@ -22,22 +20,14 @@ public class StrainTestObject {
     private final String locale;
 
     private double currentValue;
-    private double offsetValue;
     private double currentExtValue;
     private double offsetExtValue;
-
+    private double offsetValue; // The displayed val
+    private double offsetStandardValue; //The fallback offset val
+    private boolean useCalculatedOffset;
     private double elongatedValue;
     private double elongatedDistance;
-
-
-    final JLabel maxValueLabel;
-    final JLabel currentValueLabel;
-    final JLabel offsetValueLabel;
-    final JLabel elongationValueLabel;
-
-    private final TimeSeries series;
     public final TimeSeriesCollection dataset;
-
     private boolean elongationTestRunning;
     private double stopElongation;
 
@@ -61,15 +51,9 @@ public class StrainTestObject {
         this.operator = operator;
         this.locale = locale;
 
-        series = new TimeSeries("Strekk");
+        TimeSeries series = new TimeSeries("Strekk");
         dataset = new TimeSeriesCollection();
         dataset.addSeries(series);
-
-        currentValueLabel = new JLabel("0.00");
-        maxValueLabel = new JLabel("0.00");
-        offsetValueLabel = new JLabel("0.00");
-        elongationValueLabel = new JLabel("0.00");
-
 
         currentExtValue = 0;
         offsetExtValue = 0;
@@ -77,6 +61,7 @@ public class StrainTestObject {
         elongatedDistance = 0;
 
         elongationTestRunning = false;
+        offsetValue = Config.getInstance().USER_OFFSET;
    }
 
     public StrainTestObject(String testID, String customer, String locale, String specimenType, String specimenName, String testComment, String operator, Grapher g) {
@@ -84,31 +69,8 @@ public class StrainTestObject {
         this.g = g;
     }
 
-
     public StrainTestObject() {
-        this.testID = "unknown";
-        this.customer = "unknown";
-        this.specimenType = "unknown";
-        this.specimenName = "unknown";
-        this.testComment = "unknown";
-        this.operator = "unknown";
-        this.locale = "unknown";
-
-        series = new TimeSeries("Strekk");
-        dataset = new TimeSeriesCollection();
-        dataset.addSeries(series);
-
-        currentValueLabel = new JLabel("0.00");
-        maxValueLabel = new JLabel("0.00");
-        offsetValueLabel = new JLabel("0.00");
-        elongationValueLabel = new JLabel("0.00");
-
-        currentExtValue = 0;
-        offsetExtValue = 0;
-        elongatedValue = 0;
-        elongatedDistance = 0;
-
-        elongationTestRunning = false;
+        this("unknown","unknown","unknown","unknown","unknown","unknown","unknown");
     }
 
     public StrainTestObject(Grapher g) {
@@ -117,9 +79,7 @@ public class StrainTestObject {
     }
 
     void addDataToGraph(double val) {
-        invokeLater(() -> {
-            g.series.add(new Millisecond(), val);
-        });
+        invokeLater(() -> g.series.add(new Millisecond(), val));
         updateValueLabels(val);
     }
     void startElongationTest(String measuredLength) {
@@ -127,7 +87,7 @@ public class StrainTestObject {
         zeroExtOffset();
         elongationTestRunning = true;
         g.elongatedValueLabel.setText("---");
-        g.elongatedDistanceLabel.setText(String.valueOf(stopElongation));
+        g.elongatedDistanceLabel.setText(String.valueOf(stopElongation - currentExtValue));
         g.strainStartBtn.setBackground(Color.yellow);
         System.out.println("Elongation test started at " + currentExtValue + " and load value " + currentValue + " kg.");
     }
@@ -226,7 +186,6 @@ public class StrainTestObject {
     }
 
     public void setMaxValue(double maxValue) {
-        maxValueLabel.setText(String.valueOf(maxValue));
         g.maxLabel.setText(String.valueOf(Utils.round(maxValue, 2)));
         if (g.plot.getRangeAxis().getRange().getUpperBound() <= maxValue) {
             g.plot.getRangeAxis().setRange(-100, maxValue + 1000);
@@ -238,7 +197,6 @@ public class StrainTestObject {
     }
 
     public void setCurrentValue(double currentValue) {
-        currentValueLabel.setText(String.valueOf(Utils.round(currentValue,2)));
         this.currentValue = currentValue;
         g.valueLabel.setText(String.valueOf(Utils.round(currentValue,2)));
 
@@ -258,9 +216,12 @@ public class StrainTestObject {
     }
 
     public void setOffsetValue(double offsetValue) {
-        offsetValueLabel.setText(String.valueOf(offsetValue));
         this.offsetValue = offsetValue;
         g.offsetLabel.setText(String.valueOf(Utils.round(offsetValue,2)));
+    }
+
+    public void setOffsetValue() {
+        setOffsetValue(offsetStandardValue);
     }
 
     public double getElongatedValue() {
@@ -269,5 +230,12 @@ public class StrainTestObject {
 
     public double getElongatedDistance() {
         return elongatedDistance;
+    }
+    public boolean isUseCalculatedOffset() {
+        return useCalculatedOffset;
+    }
+
+    public void setUseCalculatedOffset(boolean useCalculatedOffset) {
+        this.useCalculatedOffset = useCalculatedOffset;
     }
 }

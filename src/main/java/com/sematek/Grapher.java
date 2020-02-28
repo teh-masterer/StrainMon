@@ -36,9 +36,11 @@ public class Grapher extends JFrame {
 
     public JPanel p;
 
+    boolean anonymousTest;
+
     JButton strainStartBtn; //needs access from STO
 
-    private StrainTestObject strainTestObject;
+    private StrainTestObject sto;
 
     public Grapher() {
         initUI();
@@ -49,11 +51,14 @@ public class Grapher extends JFrame {
         if (s != null && s.isComPortAvailable() && s.comPort.isOpen()) {
             s.closePort();
         }
-        s = new SerialReader(strainTestObject);//Make a new reader connection, give it access to data storage object
+        s = new SerialReader(sto);//Make a new reader connection, give it access to data storage object
         if (s.isComPortAvailable()) {
             new Thread(s).start();
-            strainTestObject.removeAllSeries(); //reset the data if any, on start
-            strainTestObject.setMaxValue(0);
+            sto.removeAllSeries(); //reset the data if any, on start
+            sto.setMaxValue(0);
+            if (Utils.loadMetadata(this)[8][0].length() > 0) {
+                sto.setOffsetValue(Double.parseDouble(Utils.loadMetadata(this)[8][1]));
+            }
 
             series = new TimeSeries("Strekk");
             dataset = new TimeSeriesCollection();
@@ -66,9 +71,9 @@ public class Grapher extends JFrame {
             } catch (InvalidObjectException e) {
                 e.printStackTrace();
             }
-            valueLabel.setText(String.valueOf(strainTestObject.getCurrentValue()));
-            offsetLabel.setText(String.valueOf(strainTestObject.getOffsetValue()));
-            maxLabel.setText(String.valueOf(strainTestObject.getMaxValue()));
+            valueLabel.setText(String.valueOf(sto.getCurrentValue()));
+            offsetLabel.setText(String.valueOf(sto.getOffsetValue()));
+            maxLabel.setText(String.valueOf(sto.getMaxValue()));
         } else {
             JOptionPane.showMessageDialog(null, "Ingen serielinje-tilkobling funnet! (Du har glemt å plugge i kabelen)");
         }
@@ -76,6 +81,7 @@ public class Grapher extends JFrame {
 
         private void initUI() {
             chart = createChart(dataset);
+            anonymousTest = true;
 
             setLayout(new BorderLayout());
             ChartPanel chartPanel = new ChartPanel(chart);
@@ -97,7 +103,7 @@ public class Grapher extends JFrame {
                 String tauString = "Tau";
                 String kjettingString = "Kjetting";
                 String annetString = "Annet";
-                String specimenType = tauString;
+                String specimenType;
 
                 if (s != null && s.isPaused()) {
                     stopBtn.setBackground(null);
@@ -138,7 +144,6 @@ public class Grapher extends JFrame {
                     radioButtonPanel.add(tauRadioButton);
                     radioButtonPanel.add(kjettingRadioButton);
                     radioButtonPanel.add(annetRadioButton);
-                    //Perhaps all of this should be dynamically pulled from StrainTestObject? For now it isn't.
                     JPanel myPanel = new JPanel();
                     myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
 
@@ -169,9 +174,9 @@ public class Grapher extends JFrame {
                         testIDField.setText(metadata[0][1]);
                         customerField.setText(metadata[1][1]);
                         localeField.setText(metadata[2][1]);
-                        if (metadata[3][1].equals("Tau")) {
+                        if (metadata[3][1].equals(tauString)) {
                             tauRadioButton.setSelected(true);
-                        } else if (metadata[3][1].equals("Kjetting")) {
+                        } else if (metadata[3][1].equals(kjettingString)) {
                             kjettingRadioButton.setSelected(true);
                         } else {
                             annetRadioButton.setSelected(true);
@@ -188,18 +193,19 @@ public class Grapher extends JFrame {
                     int result = JOptionPane.showConfirmDialog(null, myPanel,
                             "Sleng inn testdata!", JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
-                        strainTestObject = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
-                        if (strainTestObject.validateInput().equals("OK")) {
+                        sto = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
+                        if (sto.validateInput().equals("OK")) {
                             startSerialReader();
                             startBtn.setBackground(Color.yellow);
-                            Utils.saveMetadata(strainTestObject);
+                            Utils.saveMetadata(sto);
+                            anonymousTest = false;
                         } else {
-                            JOptionPane.showMessageDialog(null, strainTestObject.validateInput());
+                            JOptionPane.showMessageDialog(null, sto.validateInput());
                             startBtn.doClick();
                         }
 
                     } else {
-                        strainTestObject = new StrainTestObject(this);
+                        sto = new StrainTestObject(this);
                         startSerialReader();
                         startBtn.setBackground(Color.yellow);
                     }
@@ -210,7 +216,7 @@ public class Grapher extends JFrame {
             rangeAxis.setRange(-100,500);
             stopBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             stopBtn.addActionListener(e -> {
-                if (s.isPaused()) {
+                if (s.isPaused()) { //this section is commented out because of poor performance after restart
                    // stopBtn.setBackground(null);
                    // s.setPaused(false);
                    // s.end();
@@ -218,6 +224,9 @@ public class Grapher extends JFrame {
                     stopBtn.setBackground(Color.yellow);
                     startBtn.setBackground(null);
                     s.pause();
+                    if (!anonymousTest) {
+                        Utils.saveMetadata(sto);
+                    }
                 }
             });
             saveBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -229,8 +238,8 @@ public class Grapher extends JFrame {
                 DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH_mm_ss");
                 String timestamp = myDateObj.format(myFormatObj);
 
-                if (strainTestObject.validateInput().equals("OK")) {
-                    filenameString = (strainTestObject.getTestID());
+                if (sto.validateInput().equals("OK")) {
+                    filenameString = (sto.getTestID());
                 }
 
                 final JFileChooser fc = new JFileChooser();
@@ -258,8 +267,8 @@ public class Grapher extends JFrame {
                     File fileToSave = fc.getSelectedFile();
                     System.out.println("Save as file: " + fileToSave.getAbsolutePath());
 
-                    Utils.appendToExcelDatabase(strainTestObject, timestamp);
-                    Utils.storeDataSet(chart,fileToSave.getAbsolutePath(),strainTestObject);
+                    Utils.appendToExcelDatabase(sto, timestamp);
+                    Utils.storeDataSet(chart,fileToSave.getAbsolutePath(), sto);
                     try {
                         Utils.saveChartAsPng(chartPanel,fileToSave.getAbsolutePath());
                     } catch (IOException ex) {
@@ -272,8 +281,14 @@ public class Grapher extends JFrame {
             zeroBtn.addActionListener(e -> {
                 if (s.getRunning()) {
                     series.delete(0, series.getItemCount() - 1);
-                    s.setActivateZeroBalance(true);
                     maxLabel.setText("0.00");
+                    if (sto.isUseCalculatedOffset()) {
+                        sto.setOffsetValue();
+                    } else {
+                        sto.setUseCalculatedOffset(true);
+                        s.setActivateZeroBalance(true);
+
+                    }
                 } else {
                     JOptionPane.showMessageDialog(null,"Start prosessen for å kunne nullstille!");
                 }
@@ -295,9 +310,7 @@ public class Grapher extends JFrame {
 
             JButton zeroExtBtn = new JButton("Null ekst.");
             zeroExtBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
-            zeroExtBtn.addActionListener(e -> {
-                strainTestObject.zeroExtOffset();
-            });
+            zeroExtBtn.addActionListener(e -> sto.zeroExtOffset());
 
             strainStartBtn = new JButton("Start 1%-måling");
             strainStartBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -315,7 +328,7 @@ public class Grapher extends JFrame {
                 if (result == JOptionPane.OK_OPTION) {
                     if (Utils.isInteger(measLengthField.getText())) {
                         JOptionPane.showMessageDialog(null, "Du skrev inn et tall. Veldig bra! Applaus.");
-                        strainTestObject.startElongationTest(measLengthField.getText());
+                        sto.startElongationTest(measLengthField.getText());
                     } else {
                         JOptionPane.showMessageDialog(null, "Du skrev ikke et tall. Svakt.");
                     }

@@ -28,7 +28,7 @@ public class StrainTestObject {
     public final TimeSeriesCollection dataset;
     private boolean elongationTestRunning;
     private double stopElongation;
-    private String preB, preL, preD, postB;
+    private String preB, preL, preD, postB, fractureDescription;
 
 
 
@@ -48,6 +48,12 @@ public class StrainTestObject {
         this.testComment = testComment;
         this.operator = operator;
         this.locale = locale;
+        preB = "ukjent";
+        preL = "ukjent";
+        preD = "ukjent";
+        postB = "ukjent";
+        fractureDescription = "ukjent";;
+
 
         TimeSeries series = new TimeSeries("Strekk");
         dataset = new TimeSeriesCollection();
@@ -85,7 +91,7 @@ public class StrainTestObject {
         zeroExtOffset();
         elongationTestRunning = true;
         g.elongatedValueLabel.setText("---");
-        g.elongatedDistanceLabel.setText(String.valueOf(stopElongation - currentExtValue));
+        g.elongatedDistanceLabel.setText(String.valueOf(Utils.round((stopElongation - currentExtValue),2)));
         g.strainStartBtn.setBackground(Color.yellow);
         System.out.println("Elongation test started at " + currentExtValue + " and load value " + currentValue + " kg.");
     }
@@ -119,8 +125,8 @@ public class StrainTestObject {
 
     void zeroExtOffset() {
         offsetExtValue = currentExtValue;
+        System.out.println("Extensiometer zeroed, offset value: " + offsetValue + ", current ext value: " + currentExtValue);
         elongationTestRunning = false;
-        g.strainStartBtn.setBackground(null);
     }
 
     public void removeAllSeries() {
@@ -195,16 +201,16 @@ public class StrainTestObject {
 
     public void setCurrentValue(double currentValue) {
         this.currentValue = currentValue;
-        g.valueLabel.setText(String.valueOf(Utils.round(currentValue,2)));
+        g.valueLabel.setText(String.valueOf(Utils.round(currentValue,1)));
 
     }
     public void setElongatedValue (double elongatedValue) {
         this.elongatedValue = elongatedValue;
-        g.elongatedValueLabel.setText(String.valueOf(Utils.round(elongatedValue,2)));
+        g.elongatedValueLabel.setText(String.valueOf(Utils.round(elongatedValue,1)));
     }
     public void setElongatedDistance (double elongatedDistance) {
         this.elongatedDistance = elongatedDistance;
-        g.elongatedDistanceLabel.setText(String.valueOf(Utils.round(elongatedDistance,2)));
+        g.elongatedDistanceLabel.setText(String.valueOf(Utils.round(elongatedDistance,1)));
 
     }
 
@@ -214,7 +220,7 @@ public class StrainTestObject {
 
     public void setOffsetValue(double offsetValue) {
         this.offsetValue = offsetValue;
-        g.offsetLabel.setText(String.valueOf(Utils.round(offsetValue,2)));
+        g.offsetLabel.setText(String.valueOf(Utils.round(offsetValue,1)));
     }
 
     public double getElongatedValue() {
@@ -256,5 +262,13 @@ public class StrainTestObject {
 
     public void setPostB(String postB) {
         this.postB = postB;
+    }
+
+    public String getFractureDescription() {
+        return fractureDescription;
+    }
+
+    public void setFractureDescription(String fractureDescription) {
+        this.fractureDescription = fractureDescription;
     }
 }

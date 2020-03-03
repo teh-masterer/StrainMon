@@ -8,7 +8,6 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.DefaultXYItemRenderer;
 
-import org.jfree.chart.title.TextTitle;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -153,7 +152,7 @@ public class Grapher extends JFrame {
                     myPanel.add(new JLabel("Linenummer: "));
                     myPanel.add(specimenNameField);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Kommentar: "));
+                    myPanel.add(new JLabel("Beskrivelse: "));
                     myPanel.add(testCommentField);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
                     myPanel.add(new JLabel("Operatør: "));
@@ -230,11 +229,13 @@ public class Grapher extends JFrame {
             });
             saveBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
             saveBtn.addActionListener(e -> {
-                if (sto.getSpecimenType().equals("Kjetting")){
+                if (sto.getSpecimenType().equals("Kjetting")) {
                     JPanel myPanel = new JPanel();
                     JTextField preB = new JTextField("0"), preD = new JTextField("0"), preL = new JTextField("0"), postB = new JTextField("0");
-
+                    JTextField fractureDescription = new JTextField(5);
                     myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
+                    myPanel.add(new JLabel("Beskriv bruddtype:"));
+                    myPanel.add(fractureDescription);
                     myPanel.add(new JLabel("Skriv inn opprinnelig B-mål"));
                     myPanel.add(preB);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
@@ -247,26 +248,34 @@ public class Grapher extends JFrame {
                     myPanel.add(new JLabel("Skriv inn strukket D-mål"));
                     myPanel.add(postB);
 
+
                     int result = JOptionPane.showConfirmDialog(this,myPanel,"Kjetting-parametre",JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
                         sto.setPreB(preB.getText());
                         sto.setPreD(preD.getText());
                         sto.setPreL(preL.getText());
                         sto.setPostB(postB.getText());
-                    } else {
-                        sto.setPreB("ukjent");
-                        sto.setPreD("ukjent");
-                        sto.setPreL("ukjent");
-                        sto.setPostB("ukjent");
+                        sto.setFractureDescription(fractureDescription.getText());
                     }
 
-                }
+                } else if (sto.getSpecimenType().equals("Tau")) {
+                JPanel myPanel = new JPanel();
+                JTextField fractureDescription = new JTextField(5);
+                myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
+                myPanel.add(new JLabel("Beskriv bruddtype:"));
+                myPanel.add(fractureDescription);
+
+                    int result = JOptionPane.showConfirmDialog(this,myPanel,"Tau-parametre",JOptionPane.OK_CANCEL_OPTION);
+                    if (result == JOptionPane.OK_OPTION) {
+                        sto.setFractureDescription(fractureDescription.getText());
+                    }
+            }
                 Utils.saveMetadata(sto);
                 String filenameString = "new_test";
 
-                LocalDateTime myDateObj = LocalDateTime.now();
-                DateTimeFormatter myFormatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH_mm_ss");
-                String timestamp = myDateObj.format(myFormatObj);
+                LocalDateTime timeNow = LocalDateTime.now();
+                DateTimeFormatter filenameTimeFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH_mm_ss");
+                DateTimeFormatter exportTimeFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
                 if (sto.validateInput().equals("OK")) {
                     filenameString = (sto.getTestID());
@@ -288,7 +297,7 @@ public class Grapher extends JFrame {
 
                 fc.setCurrentDirectory(file);
                 fc.setDialogTitle("Specify a file to save");
-                fc.setSelectedFile(new File(filenameString + "__" + timestamp));
+                fc.setSelectedFile(new File(filenameString + "__" + timeNow.format(filenameTimeFormat)));
 
 
                 int userSelection = fc.showSaveDialog(saveBtn);
@@ -297,7 +306,7 @@ public class Grapher extends JFrame {
                     File fileToSave = fc.getSelectedFile();
                     System.out.println("Save as file: " + fileToSave.getAbsolutePath());
 
-                    Utils.appendToExcelDatabase(sto, timestamp);
+                    Utils.appendToExcelDatabase(sto, timeNow.format(exportTimeFormat));
                     Utils.storeDataSet(chart,fileToSave.getAbsolutePath(), sto);
                     try {
                         Utils.saveChartAsPng(chartPanel,fileToSave.getAbsolutePath());
@@ -518,11 +527,6 @@ public class Grapher extends JFrame {
             space.setLeft(50);
             plot.setFixedRangeAxisSpace(space);
 
-
-            chart.setTitle(new TextTitle("Målte strekkrefter",
-                            new Font("Serif", java.awt.Font.BOLD, 18)
-                    )
-            );
             return chart;
         }
 

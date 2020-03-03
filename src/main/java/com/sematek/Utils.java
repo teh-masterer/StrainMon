@@ -45,6 +45,7 @@ public class Utils {
         csv.add(String.format("%s, %s", "postB", sto.getPostB()));
         csv.add(String.format("%s, %s", "elongatedValue", sto.getElongatedValue()));
         csv.add(String.format("%s, %s", "elongatedDistance", sto.getElongatedDistance()));
+        csv.add(String.format("%s, %s", "elongatedDistance", sto.getFractureDescription()));
         return csv;
     }
 
@@ -143,8 +144,26 @@ public class Utils {
                 System.out.println("Excel master list could not be opened! Making a new one...");
                 workbook = new HSSFWorkbook();
                 workbook.createSheet("Tests");
-                Row row = workbook.getSheetAt(0).createRow(0);
-                row.createCell(0).setCellValue("STRAINMON TEST LIST");
+                Row row1 = workbook.getSheetAt(0).createRow(0);
+                row1.createCell(0).setCellValue("STRAINMON TEST LIST");
+                Row row2= workbook.getSheetAt(0).createRow(1);
+                row2.createCell(0).setCellValue(Double.parseDouble(sto.getTestID()));
+                row2.createCell(1).setCellValue("Customer");
+                row2.createCell(2).setCellValue("Locale");
+                row2.createCell(3).setCellValue("Type");
+                row2.createCell(4).setCellValue("Name");
+                row2.createCell(5).setCellValue("Description");
+                row2.createCell(6).setCellValue("Operator");
+                row2.createCell(7).setCellValue("Max");
+                row2.createCell(8).setCellValue("Time");
+                row2.createCell(9).setCellValue("Elong-dist");
+                row2.createCell(10).setCellValue("Elong-val");
+                row2.createCell(11).setCellValue("preB");
+                row2.createCell(12).setCellValue("preD");
+                row2.createCell(13).setCellValue("preL");
+                row2.createCell(14).setCellValue("postB");
+                row2.createCell(15).setCellValue("Frac type");
+
             }
             HSSFSheet sheet = workbook.getSheetAt(0);
             int insertionRowNo = sheet.getLastRowNum();
@@ -172,6 +191,7 @@ public class Utils {
                 newRow.createCell(13).setCellValue(sto.getPreL());
                 newRow.createCell(14).setCellValue(sto.getPostB());
             }
+            newRow.createCell(15).setCellValue(sto.getFractureDescription());
             try {
                 if (file != null) {
                     file.close();

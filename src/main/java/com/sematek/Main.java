@@ -11,7 +11,6 @@ public class Main {
 
         Config.load();
         Config.getInstance().TIMESTAMP = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date());
-        //Config.getInstance().toFile(configPath);
         Config.getInstance().toFile();
 
         EventQueue.invokeLater(() -> g.setVisible(true));

@@ -56,7 +56,7 @@ public class Grapher extends JFrame {
             sto.removeAllSeries(); //reset the data if any, on start
             sto.setMaxValue(0);
             if (Utils.loadMetadata(this)[8][0].length() > 0) {
-                sto.setOffsetValue(Double.parseDouble(Utils.loadMetadata(this)[8][1]));
+                sto.setOffsetValue(Utils.round((Double.parseDouble(Utils.loadMetadata(this)[8][1])),2));
             }
 
             series = new TimeSeries("Strekk");
@@ -218,11 +218,7 @@ public class Grapher extends JFrame {
             rangeAxis.setRange(-100,500);
             stopBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
             stopBtn.addActionListener(e -> {
-                if (s.isPaused()) { //this section is commented out because of poor performance after restart
-                   // stopBtn.setBackground(null);
-                   // s.setPaused(false);
-                   // s.end();
-                } else {
+                if (!s.isPaused()) {
                     stopBtn.setBackground(Color.yellow);
                     startBtn.setBackground(null);
                     s.pause();
@@ -345,9 +341,7 @@ public class Grapher extends JFrame {
                 }
             });
             JButton deleteSeriesBtn = new JButton("Fjern data");
-            deleteSeriesBtn.addActionListener(e -> {
-                series.delete(0, series.getItemCount() - 1);
-            });
+            deleteSeriesBtn.addActionListener(e -> series.delete(0, series.getItemCount() - 1));
 
 
             infoBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);

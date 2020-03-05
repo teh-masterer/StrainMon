@@ -13,7 +13,6 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
@@ -39,10 +38,10 @@ public class Utils {
         csv.add(String.format("%s, %s", "operator", sto.getOperator()));
         csv.add(String.format("%s, %s", "maxValue", sto.getMaxValue()));
         csv.add(String.format("%s, %s", "offset", sto.getOffsetValue()));
-        csv.add(String.format("%s, %s", "preB", sto.getPreB()));
-        csv.add(String.format("%s, %s", "preD", sto.getPreD()));
-        csv.add(String.format("%s, %s", "preL", sto.getPreL()));
-        csv.add(String.format("%s, %s", "postB", sto.getPostB()));
+        csv.add(String.format("%s, %s", "prFeB", sto.getThickness()));
+        csv.add(String.format("%s, %s", "preD", sto.getPreInnerDiameter()));
+        csv.add(String.format("%s, %s", "preL", sto.getLength()));
+        csv.add(String.format("%s, %s", "postB", sto.getPostInnerDiameter()));
         csv.add(String.format("%s, %s", "elongatedValue", sto.getElongatedValue()));
         csv.add(String.format("%s, %s", "elongatedDistance", sto.getElongatedDistance()));
         csv.add(String.format("%s, %s", "elongatedDistance", sto.getFractureDescription()));
@@ -67,9 +66,12 @@ public class Utils {
         String line;
         String cvsSplitBy = ", ";
         String[][] metadata = new String[20][2];
-        for (String[] s : metadata) {
-            Arrays.fill(s, "");
+        for (int i=0;i<metadata.length;i++) {
+            for (int j=0;j<metadata[i].length-1;j++) {
+                metadata[i][j] = "0";
+            }
         }
+
         int lineCounter = 0;
 
         try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
@@ -186,10 +188,10 @@ public class Utils {
                 newRow.createCell(10).setCellValue(sto.getElongatedValue());
             }
             if (sto.getSpecimenType().equals("Kjetting")) {
-                newRow.createCell(11).setCellValue(sto.getPreB());
-                newRow.createCell(12).setCellValue(sto.getPreD());
-                newRow.createCell(13).setCellValue(sto.getPreL());
-                newRow.createCell(14).setCellValue(sto.getPostB());
+                newRow.createCell(11).setCellValue(sto.getThickness());
+                newRow.createCell(12).setCellValue(sto.getPreInnerDiameter());
+                newRow.createCell(13).setCellValue(sto.getLength());
+                newRow.createCell(14).setCellValue(sto.getPostInnerDiameter());
             }
             newRow.createCell(15).setCellValue(sto.getFractureDescription());
             try {

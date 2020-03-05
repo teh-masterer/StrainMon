@@ -118,6 +118,7 @@ public class Grapher extends JFrame {
                     JRadioButton kjettingRadioButton = new JRadioButton(kjettingString);
                     kjettingRadioButton.setActionCommand(kjettingString);
                     JRadioButton annetRadioButton = new JRadioButton(annetString);
+                    JTextField diameterField = new JTextField(5);
                     JTextField specimenNameField = new JTextField(5);
                     JTextField testCommentField = new JTextField(5);
                     JTextField operatorField = new JTextField(5);
@@ -148,6 +149,8 @@ public class Grapher extends JFrame {
                     myPanel.add(localeField);
                     myPanel.add(new JLabel("Prøvetype: "));
                     myPanel.add(radioButtonPanel);
+                    myPanel.add(new JLabel("Diameter: "));
+                    myPanel.add(diameterField);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
                     myPanel.add(new JLabel("Linenummer: "));
                     myPanel.add(specimenNameField);
@@ -160,7 +163,7 @@ public class Grapher extends JFrame {
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
 
                     String[][] metadata = Utils.loadMetadata(this);
-                    if (metadata[6][0].length() > 0) {
+                    if (metadata[15][0].length() > 0) {
                         testIDField.setText(metadata[0][1]);
                         customerField.setText(metadata[1][1]);
                         localeField.setText(metadata[2][1]);
@@ -174,6 +177,7 @@ public class Grapher extends JFrame {
                         specimenNameField.setText(metadata[4][1]);
                         testCommentField.setText(metadata[5][1]);
                         operatorField.setText(metadata[6][1]);
+                        diameterField.setText(metadata[9][1]);
                     }
                     try {
                         testIDField.setText(String.valueOf(Utils.getNextTestId()));
@@ -191,7 +195,7 @@ public class Grapher extends JFrame {
                         } else {
                             specimenType = annetString;
                         }
-                        sto = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), this);
+                        sto = new StrainTestObject(testIDField.getText(), customerField.getText(), localeField.getText(), specimenType, specimenNameField.getText(), testCommentField.getText(), operatorField.getText(), diameterField.getText(), this);
                         if (sto.validateInput().equals("OK")) {
                             startSerialReader();
                             startBtn.setBackground(Color.yellow);
@@ -231,46 +235,61 @@ public class Grapher extends JFrame {
             saveBtn.addActionListener(e -> {
                 if (sto.getSpecimenType().equals("Kjetting")) {
                     JPanel myPanel = new JPanel();
-                    JTextField preB = new JTextField("0"), preD = new JTextField("0"), preL = new JTextField("0"), postB = new JTextField("0");
+                    JTextField thickness = new JTextField("0"), preInnerDiameter = new JTextField("0"), chainLength = new JTextField("0"), postInnerDiameter = new JTextField("0");
                     JTextField fractureDescription = new JTextField(5);
                     myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
                     myPanel.add(new JLabel("Beskriv bruddtype:"));
                     myPanel.add(fractureDescription);
-                    myPanel.add(new JLabel("Skriv inn opprinnelig B-mål"));
-                    myPanel.add(preB);
+                    myPanel.add(new JLabel("Skriv inn tykkelse"));
+                    myPanel.add(thickness);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Skriv inn opprinnelig D-mål"));
-                    myPanel.add(preD);
+                    myPanel.add(new JLabel("Skriv inn opprinnelig indre diameter"));
+                    myPanel.add(preInnerDiameter);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Skriv inn opprinnelig L-mål"));
-                    myPanel.add(preL);
+                    myPanel.add(new JLabel("Skriv inn opprinnelig lengde"));
+                    myPanel.add(chainLength);
                     myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                    myPanel.add(new JLabel("Skriv inn strukket D-mål"));
-                    myPanel.add(postB);
+                    myPanel.add(new JLabel("Skriv inn strukket indre diameter"));
+                    myPanel.add(postInnerDiameter);
+
+                    if (!sto.getThickness().equals("Ukjent")) {
+                        thickness.setText(sto.getThickness());
+                    }
 
 
                     int result = JOptionPane.showConfirmDialog(this,myPanel,"Kjetting-parametre",JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
-                        sto.setPreB(preB.getText());
-                        sto.setPreD(preD.getText());
-                        sto.setPreL(preL.getText());
-                        sto.setPostB(postB.getText());
+                        sto.setThickness(thickness.getText());
+                        sto.setPreInnerDiameter(preInnerDiameter.getText());
+                        sto.setLength(chainLength.getText());
+                        sto.setPostInnerDiameter(postInnerDiameter.getText());
                         sto.setFractureDescription(fractureDescription.getText());
                     }
 
                 } else if (sto.getSpecimenType().equals("Tau")) {
                 JPanel myPanel = new JPanel();
-                JTextField fractureDescription = new JTextField(5);
+                JTextField fractureDescription = new JTextField(5), thickness = new JTextField("0");
                 myPanel.setLayout(new BoxLayout(myPanel, BoxLayout.Y_AXIS));
                 myPanel.add(new JLabel("Beskriv bruddtype:"));
                 myPanel.add(fractureDescription);
+                myPanel.add(new JLabel("Diameter:"));
+                myPanel.add(thickness);
+
+                    if (!sto.getThickness().equals("Ukjent")) {
+                        thickness.setText(sto.getThickness());
+                    }
 
                     int result = JOptionPane.showConfirmDialog(this,myPanel,"Tau-parametre",JOptionPane.OK_CANCEL_OPTION);
                     if (result == JOptionPane.OK_OPTION) {
                         sto.setFractureDescription(fractureDescription.getText());
+                        sto.setThickness(thickness.getText());
+
                     }
             }
-                Utils.saveMetadata(sto);
+
+                if (!anonymousTest) {
+                    Utils.saveMetadata(sto);
+                }
                 String filenameString = "new_test";
 
                 LocalDateTime timeNow = LocalDateTime.now();

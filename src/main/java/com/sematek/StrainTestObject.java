@@ -28,7 +28,7 @@ public class StrainTestObject {
     public final TimeSeriesCollection dataset;
     private boolean elongationTestRunning;
     private double stopElongation;
-    private String preB, preL, preD, postB, fractureDescription;
+    private String thickness, length, preInnerDiameter, postInnerDiameter, fractureDescription;
 
 
 
@@ -40,7 +40,7 @@ public class StrainTestObject {
 
     private Grapher g;
 
-    public StrainTestObject(String testID, String customer, String locale, String specimenType, String specimenName, String testComment, String operator) {
+    public StrainTestObject(String testID, String customer, String locale, String specimenType, String specimenName, String testComment, String operator, String diameter) {
         this.testID = testID;
         this.customer = customer;
         this.specimenType = specimenType;
@@ -48,12 +48,11 @@ public class StrainTestObject {
         this.testComment = testComment;
         this.operator = operator;
         this.locale = locale;
-        preB = "ukjent";
-        preL = "ukjent";
-        preD = "ukjent";
-        postB = "ukjent";
-        fractureDescription = "ukjent";;
-
+        this.thickness = diameter;
+        preInnerDiameter = "Ukjent";
+        length = "Ukjent";
+        postInnerDiameter = "Ukjent";
+        fractureDescription = "Ukjent";;
 
         TimeSeries series = new TimeSeries("Strekk");
         dataset = new TimeSeriesCollection();
@@ -68,13 +67,13 @@ public class StrainTestObject {
         offsetValue = Config.getInstance().USER_OFFSET;
    }
 
-    public StrainTestObject(String testID, String customer, String locale, String specimenType, String specimenName, String testComment, String operator, Grapher g) {
-        this(testID, customer, locale, specimenType, specimenName, testComment, operator);
+    public StrainTestObject(String testID, String customer, String locale, String specimenType, String specimenName, String testComment, String operator, String diameter, Grapher g) {
+        this(testID, customer, locale, specimenType, specimenName, testComment, operator, diameter);
         this.g = g;
     }
 
     public StrainTestObject() {
-        this("unknown","unknown","unknown","unknown","unknown","unknown","unknown");
+        this("unknown","unknown","unknown","unknown","unknown","unknown","unknown","unknown");
     }
 
     public StrainTestObject(Grapher g) {
@@ -133,6 +132,7 @@ public class StrainTestObject {
         dataset.removeAllSeries();
     }
     public String validateInput() {
+        String ret ="";
         if (testComment.isEmpty()) {
             testComment = "Ingen merknad.";
         }
@@ -140,20 +140,24 @@ public class StrainTestObject {
             operator = "Sematek";
         }
         if (!testID.matches("[0-9]+")) {
-            return "Test ID can only be numbers!";
-        } else if (customer.isEmpty()) {
-            return "Customer name cannot be empty!";
-        } else if (locale.isEmpty()) {
-            return "Locale cannot be empty!";
-        } else if (!(specimenType.equals("Tau")) && !(specimenType.equals("Kjetting"))) {
-            return "Specimen type can either be \"Tau\" or \"Kjetting\", input is " + specimenType;
-        } else if (specimenName.isEmpty()) {
-            return "Specimen name cannot be empty!";
-
-        } else {
-            return "OK";
+            ret.concat("Test ID can only be numbers!\n");
         }
-
+        if (customer.isEmpty()) {
+            ret.concat("Customer name cannot be empty!\n");
+        }
+        if (locale.isEmpty()) {
+            ret.concat("Locale cannot be empty!\n");
+        }
+        if (!preInnerDiameter.matches("[0-9]+")) {
+            ret.concat("Test ID can only be numbers!\n");
+        }
+        if (specimenName.isEmpty()) {
+            ret.concat("Specimen name cannot be empty!\n");
+        }
+        if (ret.length() == 0) {
+            ret = "OK";
+        }
+        return ret;
     }
 
     public String getTestID() {
@@ -232,36 +236,36 @@ public class StrainTestObject {
     }
 
 
-    public String getPreB() {
-        return preB;
+    public String getThickness() {
+        return thickness;
     }
 
-    public void setPreB(String preB) {
-        this.preB = preB;
+    public void setThickness(String thickness) {
+        this.thickness = thickness;
     }
 
-    public String getPreL() {
-        return preL;
+    public String getLength() {
+        return length;
     }
 
-    public void setPreL(String preL) {
-        this.preL = preL;
+    public void setLength(String length) {
+        this.length = length;
     }
 
-    public String getPreD() {
-        return preD;
+    public String getPreInnerDiameter() {
+        return preInnerDiameter;
     }
 
-    public void setPreD(String preD) {
-        this.preD = preD;
+    public void setPreInnerDiameter(String preInnerDiameter) {
+        this.preInnerDiameter = preInnerDiameter;
     }
 
-    public String getPostB() {
-        return postB;
+    public String getPostInnerDiameter() {
+        return postInnerDiameter;
     }
 
-    public void setPostB(String postB) {
-        this.postB = postB;
+    public void setPostInnerDiameter(String postInnerDiameter) {
+        this.postInnerDiameter = postInnerDiameter;
     }
 
     public String getFractureDescription() {
